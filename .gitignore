@@ -1,0 +1,9 @@
+.idea
+.m2
+*.iml
+target
+/docker-compose.override.yml
+/application.properties
+/application.yml
+static
+templates
