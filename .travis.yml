@@ -1,8 +1,17 @@
+sudo: false
 dist: focal
 language: java
-jdk: openjdk16
+jdk:
+  - openjdk16
 
-script: mvn clean verify
+#script: mvn clean verify
+jobs:
+  include:
+    - stage: Unit
+      script: mvn test -B
+    - stage: SAST
+      script: mvn compile spotbugs:check
+
 cache:
   directories:
     - $HOME/.m2
