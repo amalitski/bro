@@ -1,0 +1,74 @@
+debug: false
+bro:
+  flow:
+    stage:
+      name: default.domain.com
+      uri: https://${bro.flow.stage.name}
+      branchName: stages/${bro.flow.stage.name}
+      tempDir: temp
+      pushCmd: git push -u origin :${bro.flow.stage.branchName}; git checkout -b ${bro.flow.stage.branchName} && git push -u origin ${bro.flow.stage.branchName}
+    task-trackers:
+      redmine:
+        host: https://redmine.domain.com
+        apiKey: ACCESS_TOKEN
+        afterUpdateTime: P-30D # period for the tasks where changes may be applied
+        trackers:
+          - id: 001
+        statuses:
+          - id: 002
+            needMerge: false
+          - id: 003
+            needMerge: true
+          - id: 004
+            needMerge: true
+        custom-fields:
+          - id: 005
+          - id: 006
+          - id: 007
+        enabled: true
+      jira:
+        host: https://company.atlassian.net
+        username: USERNAME
+        apiToken: API_TOKEN
+        issues:
+          mergeJQL: "'Stage[Select List (multiple choices)]'=${bro.flow.stage.name} AND statusCategory = 4"
+          labelDeployed: deployed
+        enabled: true
+    repositories:
+      gitlab:
+        host: https://gitlab.domain.com
+        token: ACCESS_TOKEN
+        proxy:
+        enableRequestLogging: false
+        enabled: true
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} %clr(${LOG_LEVEL_PATTERN:%5p}) %msg%n"
+  level:
+    ru.timebook.bro.*: trace
+spring:
+  main:
+    banner-mode: off
+  datasource:
+    url: jdbc:h2:file:./temp/database/store
+    driver-class-name: org.h2.Driver
+    username: bender
+    password: bender
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+  jackson:
+    property-naming-strategy: com.fasterxml.jackson.databind.PropertyNamingStrategy.SnakeCaseStrategy
+  web:
+    resources:
+      static-locations: file:src/main/resources/static/
+      cache:
+        cachecontrol:
+          no-cache: true
+server:
+  tomcat:
+    threads:
+      max: 5
+      min-spare: 1
+    connection-timeout: 30

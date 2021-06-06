@@ -1,0 +1,31 @@
+---
+stages:
+  - test
+
+Unit:
+  image: docker/compose:1.29.1
+  stage: test
+  script:
+    - docker-compose build --parallel --compress
+    - docker-compose run --rm --entrypoint="mvn -s /usr/share/maven/ref/settings-docker.xml clean test" app
+  after_script:
+    - docker-compose stop -t 1 && docker-compose rm -f
+  allow_failure: true
+  except:
+    - schedules
+  tags:
+    - docker-build
+
+SAST:
+  image: docker/compose:1.29.1
+  stage: test
+  script:
+    - docker-compose build --parallel --compress
+    - docker-compose run --rm --entrypoint="mvn -s /usr/share/maven/ref/settings-docker.xml clean compile spotbugs:check" app
+  after_script:
+    - docker-compose stop -t 1 && docker-compose rm -f
+  allow_failure: true
+  except:
+    - schedules
+  tags:
+    - docker-build
