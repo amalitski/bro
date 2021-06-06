@@ -5,6 +5,9 @@ jdk:
   - openjdk16
 
 #script: mvn clean verify
+before_script:
+  - mvn clean compile
+
 jobs:
   include:
     - stage: Unit
