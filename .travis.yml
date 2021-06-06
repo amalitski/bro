@@ -1,12 +1,10 @@
-sudo: false
 dist: focal
 language: java
 jdk:
   - openjdk16
 
-#script: mvn clean verify
-before_script:
-  - mvn clean compile
+install:
+  - mvn clean install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
 
 jobs:
   include:
