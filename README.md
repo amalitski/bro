@@ -8,6 +8,6 @@ This project provides an extendable Java application for creating development an
 `docker-compose up -d --build`
 
 
-#Contributing
+# Contributing
 
 Features and bug fixes are welcome
