@@ -3,10 +3,12 @@ package ru.timebook.bro.flow.modules.git;
 import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 import org.gitlab4j.api.GitLabApi;
+import org.gitlab4j.api.GitLabApiException;
 import org.gitlab4j.api.ProxyClientConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import ru.timebook.bro.flow.configurations.Configuration;
 import ru.timebook.bro.flow.modules.taskTracker.Issue;
 
@@ -93,6 +95,12 @@ public class GitlabGitRepository implements GitRepository {
         return config.isEnabled();
     }
 
+    public String getCommitterAvatarUri(String email)  {
+        RestTemplate restTemplate = new RestTemplate();
+        var result = restTemplate.getForObject(String.format("%s/api/v4/avatar?email=%s&size=50", config.getHost(), email), HashMap.class);
+        return result.get("avatar_url").toString();
+    }
+
     public List<Merge> getMerge(List<Issue> issues) {
         var map = new HashMap<String, Merge>();
         for (var i : issues) {
@@ -100,10 +108,11 @@ public class GitlabGitRepository implements GitRepository {
                 if (pr.getSourceBranchName() == null) {
                     continue;
                 }
+                pr.setGitRepositoryClazz(this);
                 Merge merge;
                 if (map.containsKey(pr.getProjectName())) {
                     merge = map.get(pr.getProjectName());
-                    merge.getBranches().add(Merge.Branch.builder().branchName(pr.getSourceBranchName()).build());
+                    merge.getBranches().add(Merge.Branch.builder().branchName(pr.getSourceBranchName()).targetBranchName(pr.getTargetBranchName()).build());
                     map.remove(pr.getProjectName());
                 } else {
                     var branches = new LinkedHashSet<String>();
@@ -111,7 +120,7 @@ public class GitlabGitRepository implements GitRepository {
                     rep.ifPresent(repository -> branches.addAll(repository.getPreMerge()));
                     branches.add(pr.getSourceBranchName());
                     merge = Merge.builder()
-                            .branches(branches.stream().map(v -> Merge.Branch.builder().branchName(v).build()).collect(Collectors.toList()))
+                            .branches(branches.stream().map(v -> Merge.Branch.builder().branchName(v).targetBranchName(pr.getTargetBranchName()).build()).collect(Collectors.toList()))
                             .projectName(pr.getProjectName())
                             .httpUrlRepo(pr.getHttpUrlRepo())
                             .sshUrlRepo(pr.getSshUrlRepo())

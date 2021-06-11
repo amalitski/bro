@@ -57,9 +57,10 @@ public class ExecutionService {
 
         var merges = gitRepositories.stream().map(v -> v.getMerge(issues)).flatMap(Collection::stream).collect(Collectors.toList());
         mergeService.merge(merges);
-        mergeService.push(merges);
+//        mergeService.push(merges);
 
         issues.forEach(i -> i.getPullRequests().forEach(pr -> MergeService.getBranchByPr(pr, merges).ifPresent(pr::setBranch)));
+        issues.forEach(MergeService::updateCommitters);
         createBuild(issues, merges);
 
         log.debug("Complete");

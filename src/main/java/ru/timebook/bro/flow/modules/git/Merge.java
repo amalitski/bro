@@ -35,10 +35,24 @@ public class Merge {
     @AllArgsConstructor
     public static class Branch {
         private String branchName;
+        private String targetBranchName;
         private boolean mergeLocal;
         private boolean mergeLocalSuccess;
         private String stdout;
         private String stderr;
         private String code;
+        private List<Commit> commits;
+
+        @Data
+        @Builder
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class Commit {
+            private String hash;
+            private String committerEmail;
+            private String committerDate;
+            private String committerAvatarUri;
+            private String subject;
+        }
     }
 }

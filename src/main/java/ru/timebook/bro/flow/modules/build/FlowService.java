@@ -33,7 +33,7 @@ public class FlowService {
         public String getMergeOut() {
             var out = this.getPullRequests().stream()
                     .filter(p -> p.getBranch() != null)
-                    .map(p -> p.getProjectName() + ":" + p.getBranch().getBranchName() + "\n" + p.getBranch().getStdout().trim())
+                    .map(p -> p.getProjectName() + ":" + p.getBranch().getBranchName() + "\n" + p.getBranch().getStdout())
                     .collect(Collectors.joining("\n\n"));
             return out.trim();
         }

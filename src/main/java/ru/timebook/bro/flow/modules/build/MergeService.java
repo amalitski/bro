@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.springframework.stereotype.Service;
 import ru.timebook.bro.flow.configurations.Configuration;
+import ru.timebook.bro.flow.modules.git.GitRepository;
 import ru.timebook.bro.flow.modules.taskTracker.Issue;
 import ru.timebook.bro.flow.modules.git.Merge;
 import ru.timebook.bro.flow.utils.DateTimeUtil;
@@ -12,8 +13,11 @@ import ru.timebook.bro.flow.utils.StringUtil;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -76,6 +80,22 @@ public class MergeService {
         return mr.get().getBranches().stream().filter(b -> b.getBranchName().equals(pr.getSourceBranchName())).findFirst();
     }
 
+    public static void updateCommitters(Issue issue) {
+        var committers = new HashSet<Issue.Committer>();
+        issue.getPullRequests().forEach(pr -> {
+            if (pr.getBranch() != null && pr.getBranch().getCommits() != null) {
+                pr.getBranch().getCommits().forEach(c -> {
+                    var repo = pr.getGitRepositoryClazz();
+                    c.setCommitterAvatarUri(repo.getCommitterAvatarUri(c.getCommitterEmail()));
+                    var committer = Issue.Committer.builder().avatarUri(c.getCommitterAvatarUri()).build();
+                    committers.add(committer);
+                });
+            }
+        });
+        issue.setCommitters(committers.stream().toList());
+
+    }
+
     private void initRepo(Merge merge) throws Exception {
         var dirname = getInitDirPath(merge.getProjectName());
         var dir = new File(dirname);
@@ -121,6 +141,8 @@ public class MergeService {
                 log.trace("Skip branch `{}`. Merge with error.", branch.getBranchName());
                 continue;
             }
+            branch.setCommits(getCommits(branch, dirRepo));
+
             var msg = "Merge branch '" + branch.getBranchName() + "' into stage '" + configuration.getStage().getBranchName() + "'";
             var resp = exec("git merge -m \"" + msg + "\" origin/" + branch.getBranchName(), dirRepo);
             var success = resp.get("code").equals("0");
@@ -136,7 +158,29 @@ public class MergeService {
         return true;
     }
 
-    private HashMap<String, String> exec(String cmd, File workdir) throws InterruptedException, IOException {
+    private static List<Merge.Branch.Commit> getCommits(Merge.Branch branch, File dirRepo) throws IOException, InterruptedException {
+        var commits = new ArrayList<Merge.Branch.Commit>();
+        var cmdLog = MessageFormat.format("git log --pretty=format:\"%H|||%ce|||%ci|||%f\" origin/{1}..origin/{0}", branch.getBranchName(), branch.getTargetBranchName());
+        var respLog = exec(cmdLog, dirRepo);
+        var data = respLog.get("stdout").trim();
+        if (data.isEmpty()) {
+            return commits;
+        }
+        Arrays.stream(data.split("\n")).forEach(row -> {
+            var parts = row.trim().split(Pattern.quote("|||"));
+            if (!parts[0].isEmpty() && !parts[1].isEmpty() && !parts[2].isEmpty() && parts.length > 3) {
+                commits.add(Merge.Branch.Commit.builder()
+                        .hash(parts[0].trim())
+                        .committerEmail(parts[1].trim())
+                        .committerDate(parts[2].trim())
+                        .subject(parts[3].trim())
+                        .build());
+            }
+        });
+        return commits;
+    }
+
+    private static HashMap<String, String> exec(String cmd, File workdir) throws InterruptedException, IOException {
         var timer = Stopwatch.createStarted();
         ProcessBuilder builder = new ProcessBuilder();
         builder.directory(workdir);
