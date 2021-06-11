@@ -1,15 +1,13 @@
 package ru.timebook.bro.flow.modules.build;
 
 import com.google.common.base.Stopwatch;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import ru.timebook.bro.flow.configurations.Configuration;
 import ru.timebook.bro.flow.modules.taskTracker.Issue;
 import ru.timebook.bro.flow.modules.git.Merge;
 import ru.timebook.bro.flow.utils.DateTimeUtil;
-import ru.timebook.bro.flow.utils.JsonUtil;
 import ru.timebook.bro.flow.utils.StringUtil;
 
 import java.io.*;
@@ -17,9 +15,9 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
 
+@Slf4j
 @Service
 public class MergeService {
-    private final static Logger logger = LoggerFactory.getLogger(MergeService.class);
     private final Configuration configuration;
     private final ProjectRepository projectRepository;
 
@@ -34,7 +32,7 @@ public class MergeService {
                 initRepo(merge);
                 mergeRepo(merge);
             } catch (Exception e) {
-                logger.error("Merge exception", e);
+                log.error("Merge exception", e);
             }
         });
     }
@@ -62,7 +60,7 @@ public class MergeService {
         project.setBuildCheckSum(merge.getCheckSum());
         if (merge.getPush().isPushed()) {
             project.setPushedAt(LocalDateTime.now());
-            logger.debug("Pushed project {}:{}", merge.getProjectName(), configuration.getStage().getBranchName());
+            log.debug("Pushed project {}:{}", merge.getProjectName(), configuration.getStage().getBranchName());
         }
         projectRepository.save(project);
     }
@@ -120,7 +118,7 @@ public class MergeService {
 
         for (var branch : merge.getBranches()) {
             if (branch.isMergeLocal() && !branch.isMergeLocalSuccess()) {
-                logger.trace("Skip branch `{}`. Merge with error.", branch.getBranchName());
+                log.trace("Skip branch `{}`. Merge with error.", branch.getBranchName());
                 continue;
             }
             var msg = "Merge branch '" + branch.getBranchName() + "' into stage '" + configuration.getStage().getBranchName() + "'";
@@ -160,7 +158,7 @@ public class MergeService {
             outStr.append(System.lineSeparator());
         }
         int exitCode = process.waitFor();
-        logger.trace("Execute: `{}`, code: {}, time: {} workdir: {}", cmd, exitCode, timer.stop(), workdir.getPath());
+        log.trace("Execute: `{}`, code: {}, time: {} workdir: {}", cmd, exitCode, timer.stop(), workdir.getPath());
 
         var result = new HashMap<String, String>();
         result.put("stdout", outStr.toString().trim());

@@ -1,6 +1,7 @@
 package ru.timebook.bro.flow.modules.git;
 
 import com.google.common.collect.Lists;
+import lombok.extern.slf4j.Slf4j;
 import org.gitlab4j.api.GitLabApi;
 import org.gitlab4j.api.ProxyClientConfig;
 import org.slf4j.Logger;
@@ -14,10 +15,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class GitlabGitRepository implements GitRepository {
     private final Configuration.Repositories.Gitlab config;
-    private final static Logger logger = LoggerFactory.getLogger(GitlabGitRepository.class);
     private GitLabApi gitLabApi;
 
     public GitlabGitRepository(Configuration configuration) {
@@ -29,7 +30,7 @@ public class GitlabGitRepository implements GitRepository {
         issues.forEach(i -> {
             i.getPullRequests().forEach(this::getPullRequestInfo);
         });
-        logger.trace("Issues information loaded");
+        log.trace("Issues information loaded");
     }
 
     public void getPullRequestInfo(Issue.PullRequest pullRequest) {
@@ -51,7 +52,7 @@ public class GitlabGitRepository implements GitRepository {
             pullRequest.setTargetBranchName(mergeRequest.getTargetBranch());
             pullRequest.setMerged(mergeRequest.getState().equals("merged"));
         } catch (Exception e) {
-            logger.error("Catch exception", e);
+            log.error("Catch exception", e);
         }
     }
 
@@ -120,7 +121,7 @@ public class GitlabGitRepository implements GitRepository {
                 map.put(pr.getProjectName(), merge);
             }
         }
-        logger.debug("Merge count: {}", map.size());
+        log.debug("Merge count: {}", map.size());
         return new ArrayList<>(map.values());
     }
 

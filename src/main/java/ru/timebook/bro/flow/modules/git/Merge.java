@@ -1,8 +1,6 @@
 package ru.timebook.bro.flow.modules.git;
 
-import lombok.Builder;
-import lombok.Data;
-import lombok.Singular;
+import lombok.*;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -11,6 +9,8 @@ import java.util.Set;
 
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Merge {
     private String httpUrlRepo;
     private String sshUrlRepo;
@@ -31,6 +31,8 @@ public class Merge {
 
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class Branch {
         private String branchName;
         private boolean mergeLocal;

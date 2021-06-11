@@ -66,6 +66,10 @@ spring:
       cache:
         cachecontrol:
           no-cache: true
+  mustache:
+    suffix: .html
+    prefix: classpath:/static/
+
 server:
   tomcat:
     threads:

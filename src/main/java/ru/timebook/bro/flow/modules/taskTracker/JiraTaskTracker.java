@@ -2,23 +2,25 @@ package ru.timebook.bro.flow.modules.taskTracker;
 
 import com.atlassian.jira.rest.client.api.JiraRestClient;
 import com.atlassian.jira.rest.client.api.domain.IssueFieldId;
+import com.atlassian.jira.rest.client.api.domain.User;
 import com.atlassian.jira.rest.client.api.domain.input.IssueInputBuilder;
 import com.atlassian.jira.rest.client.internal.async.AsynchronousJiraRestClientFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.timebook.bro.flow.configurations.Configuration;
+import ru.timebook.bro.flow.utils.GravatarUtil;
 
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.StreamSupport;
 
+@Slf4j
 @Service
 public class JiraTaskTracker implements TaskTracker {
     private final Configuration.TaskTrackers.Jira config;
-    private final static Logger logger = LoggerFactory.getLogger(JiraTaskTracker.class);
     private JiraRestClient client;
 
     public JiraTaskTracker(Configuration configuration) {
@@ -31,9 +33,9 @@ public class JiraTaskTracker implements TaskTracker {
         try {
             listIssues = getIssues();
         } catch (ExecutionException | InterruptedException e) {
-            logger.error("Wxception ", e);
+            log.error("Exception ", e);
         }
-        logger.debug("Issues for merge: {}", listIssues.size());
+        log.debug("Issues for merge: {}", listIssues.size());
         return listIssues;
     }
 
@@ -65,10 +67,10 @@ public class JiraTaskTracker implements TaskTracker {
                 ib.setFieldValue(IssueFieldId.LABELS_FIELD.id, labels);
                 ib.setFieldValue(IssueFieldId.LABELS_FIELD.id, labels);
                 getClient().getIssueClient().updateIssue(issue.getId(), ib.build()).get();
-                logger.debug("Label updated: {} - {}", issue.getId(), labels);
+                log.debug("Label updated: {} - {}", issue.getId(), labels);
             }
         } catch (ExecutionException | InterruptedException e) {
-            logger.error("Exception: ", e);
+            log.error("Exception: ", e);
         }
     }
 
@@ -93,7 +95,21 @@ public class JiraTaskTracker implements TaskTracker {
                     .filter(f -> f.getName().startsWith("Pull Request ") && f.getValue() != null)
                     .map(f -> Issue.PullRequest.builder().uri(f.getValue().toString()).name(f.getName()).build())
                     .toList();
-            listIssues.add(Issue.builder().id(i.getKey()).subject(i.getSummary()).pullRequests(prs).taskTrackerClazz(this.getClass()).taskTracker(this).build());
+            var reporter = Objects.requireNonNull(i.getReporter());
+            var a = Issue.Author.builder()
+                    .id(reporter.getAccountId())
+                    .avatarUri(Objects.requireNonNull(reporter.getAvatarUri(User.S48_48)).toString())
+                    .profileUri(String.format("%s/jira/people/%s", config.getHost(), reporter.getAccountId()))
+                    .visibleName(reporter.getDisplayName())
+                    .build();
+            var issue = Issue.builder()
+                    .id(i.getKey()).subject(i.getSummary())
+                    .uri(String.format("%s/browse/%s", config.getHost(), i.getKey()))
+                    .author(a)
+                    .pullRequests(prs)
+                    .taskTrackerClazz(this.getClass()).taskTracker(this)
+                    .build();
+            listIssues.add(issue);
         });
         return listIssues;
     }

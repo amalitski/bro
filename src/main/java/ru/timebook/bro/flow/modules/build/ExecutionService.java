@@ -1,10 +1,8 @@
 package ru.timebook.bro.flow.modules.build;
 
-import com.google.gson.Gson;
 import lombok.Builder;
 import lombok.Data;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.timebook.bro.flow.configurations.Configuration;
 import ru.timebook.bro.flow.modules.git.GitRepository;
@@ -17,9 +15,9 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class ExecutionService {
-    private final static Logger logger = LoggerFactory.getLogger(ExecutionService.class);
     private final List<TaskTracker> taskTrackers;
     private final List<GitRepository> gitRepositories;
     private final MergeService mergeService;
@@ -52,7 +50,7 @@ public class ExecutionService {
     }
 
     public Response mergeAndPush() throws Exception {
-        logger.debug("Start");
+        log.debug("Start");
         var issues = new ArrayList<Issue>();
         taskTrackers.forEach((v) -> issues.addAll(v.getForMerge()));
         gitRepositories.forEach((v) -> v.getInfo(issues));
@@ -64,7 +62,7 @@ public class ExecutionService {
         issues.forEach(i -> i.getPullRequests().forEach(pr -> MergeService.getBranchByPr(pr, merges).ifPresent(pr::setBranch)));
         createBuild(issues, merges);
 
-        logger.debug("Complete");
+        log.debug("Complete");
         return Response.builder().issues(issues).merges(merges).build();
     }
 

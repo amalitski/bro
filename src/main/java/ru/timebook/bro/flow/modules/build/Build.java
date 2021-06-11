@@ -17,9 +17,8 @@ public class Build {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
-    @Singular
     @OneToMany(mappedBy = "build")
-    Set<BuildHasProject> buildHasProjects = new HashSet<>();
+    Set<BuildHasProject> buildHasProjects;
     @Lob
     @Column
     private String issuesJson;
