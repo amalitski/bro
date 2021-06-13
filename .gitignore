@@ -7,3 +7,4 @@ target
 /application.yml
 static
 templates
+/temp
