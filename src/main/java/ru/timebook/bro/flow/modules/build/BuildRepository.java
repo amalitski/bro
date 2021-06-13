@@ -8,4 +8,5 @@ import java.util.Optional;
 @Repository
 public interface BuildRepository extends CrudRepository<Build, Long> {
 //    Optional<Build> findByName(String name);
+    Optional<Build> findFirstByOrderByStartAtDesc();
 }

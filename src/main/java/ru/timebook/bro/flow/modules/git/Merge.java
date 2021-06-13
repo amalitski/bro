@@ -1,16 +1,14 @@
 package ru.timebook.bro.flow.modules.git;
 
-import lombok.Builder;
-import lombok.Data;
-import lombok.Singular;
+import lombok.*;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Merge {
     private String httpUrlRepo;
     private String sshUrlRepo;
@@ -21,9 +19,17 @@ public class Merge {
     private String checkSum;
     private String log;
     private Push push;
+    private String initStdout;
+    private String initCode;
+
+    private String getProjectShortName(){
+        return this.projectName.substring(0,1).toUpperCase();
+    }
 
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class Push {
         private boolean pushed;
         private String log;
@@ -31,12 +37,28 @@ public class Merge {
 
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class Branch {
         private String branchName;
+        private String targetBranchName;
         private boolean mergeLocal;
         private boolean mergeLocalSuccess;
         private String stdout;
         private String stderr;
         private String code;
+        private List<Commit> commits;
+
+        @Data
+        @Builder
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class Commit {
+            private String hash;
+            private String committerEmail;
+            private String committerDate;
+            private String committerAvatarUri;
+            private String subject;
+        }
     }
 }

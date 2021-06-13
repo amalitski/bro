@@ -2,20 +2,18 @@ package ru.timebook.bro.flow.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 
+@Slf4j
 public class JsonUtil {
-    private final static Logger logger = LoggerFactory.getLogger(JsonUtil.class);
-
     public static String serialize(Object model) {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             return objectMapper.writeValueAsString(model);
         } catch (JsonProcessingException e) {
-            logger.error("Json serialize exception", e);
+            log.error("Json serialize exception", e);
         }
         return "";
     }
@@ -25,7 +23,7 @@ public class JsonUtil {
             ObjectMapper objectMapper = new ObjectMapper();
             return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(model);
         } catch (JsonProcessingException e) {
-            logger.error("Json serialize exception", e);
+            log.error("Json serialize exception", e);
         }
         return "";
     }

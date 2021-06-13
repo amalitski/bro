@@ -1,25 +1,24 @@
 package ru.timebook.bro.flow.modules.build;
 
 import com.google.common.base.Stopwatch;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import ru.timebook.bro.flow.configurations.Configuration;
 import ru.timebook.bro.flow.modules.taskTracker.Issue;
 import ru.timebook.bro.flow.modules.git.Merge;
 import ru.timebook.bro.flow.utils.DateTimeUtil;
-import ru.timebook.bro.flow.utils.JsonUtil;
 import ru.timebook.bro.flow.utils.StringUtil;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
+import java.text.MessageFormat;
 import java.util.*;
+import java.util.regex.Pattern;
 
+@Slf4j
 @Service
 public class MergeService {
-    private final static Logger logger = LoggerFactory.getLogger(MergeService.class);
     private final Configuration configuration;
     private final ProjectRepository projectRepository;
 
@@ -34,7 +33,7 @@ public class MergeService {
                 initRepo(merge);
                 mergeRepo(merge);
             } catch (Exception e) {
-                logger.error("Merge exception", e);
+                log.error("Merge exception", e);
             }
         });
     }
@@ -49,8 +48,8 @@ public class MergeService {
         if (configuration.getStage().getBranchName().isEmpty() || configuration.getStage().getPushCmd().isEmpty()) {
             throw new Exception("Invalid configuration: bro.flow.stage.branchName or bro.flow.stage.pushCmd empty!");
         }
-        var project = projectRepository.findByName(merge.getProjectName()).orElse(new Project());
-        if (project.getId() != null && project.getBuildCheckSum().equals(merge.getCheckSum())) {
+        var project = projectRepository.findByName(merge.getProjectName());
+        if (project.isPresent() && project.get().getBuildCheckSum().equals(merge.getCheckSum())) {
             return;
         }
 
@@ -58,13 +57,9 @@ public class MergeService {
         var resp = exec(cmd, merge.getDirRepo());
         merge.getPush().setLog(resp.get("stdout"));
         merge.getPush().setPushed(resp.get("code").equals("0"));
-        project.setName(merge.getProjectName());
-        project.setBuildCheckSum(merge.getCheckSum());
         if (merge.getPush().isPushed()) {
-            project.setPushedAt(LocalDateTime.now());
-            logger.debug("Pushed project {}:{}", merge.getProjectName(), configuration.getStage().getBranchName());
+            log.debug("Pushed project {}:{}", merge.getProjectName(), configuration.getStage().getBranchName());
         }
-        projectRepository.save(project);
     }
 
     public static Optional<Merge.Branch> getBranchByPr(Issue.PullRequest pr, List<Merge> merges) {
@@ -78,6 +73,22 @@ public class MergeService {
         return mr.get().getBranches().stream().filter(b -> b.getBranchName().equals(pr.getSourceBranchName())).findFirst();
     }
 
+    public static void updateCommitters(Issue issue) {
+        var committers = new HashSet<Issue.Committer>();
+        issue.getPullRequests().forEach(pr -> {
+            if (pr.getBranch() != null && pr.getBranch().getCommits() != null) {
+                pr.getBranch().getCommits().forEach(c -> {
+                    var repo = pr.getGitRepositoryClazz();
+                    c.setCommitterAvatarUri(repo.getCommitterAvatarUri(c.getCommitterEmail()));
+                    var committer = Issue.Committer.builder().avatarUri(c.getCommitterAvatarUri()).build();
+                    committers.add(committer);
+                });
+            }
+        });
+        issue.setCommitters(committers.stream().toList());
+
+    }
+
     private void initRepo(Merge merge) throws Exception {
         var dirname = getInitDirPath(merge.getProjectName());
         var dir = new File(dirname);
@@ -86,7 +97,12 @@ public class MergeService {
         }
         var f = dir.listFiles();
         if (f != null && f.length == 0) {
-            exec("git clone " + merge.getSshUrlRepo() + " ./", dir);
+            var resp = exec("git clone " + merge.getSshUrlRepo() + " ./", dir);
+            if (!resp.get("code").equals("0")) {
+                merge.setInitStdout(resp.get("stdout"));
+                merge.setInitCode(resp.get("code"));
+                throw new Exception(String.format("Clone %s repository with error. See logs for detail information. ", merge.getSshUrlRepo()));
+            }
         }
     }
 
@@ -115,14 +131,26 @@ public class MergeService {
 
     private boolean mergeRecursive(Merge merge, File dirRepo) throws InterruptedException, IOException {
         var branchFirst = merge.getBranches().stream().findFirst().get();
-        exec("git reset --hard origin/" + branchFirst.getBranchName(), dirRepo);
-        exec("git checkout -f origin/" + branchFirst.getBranchName(), dirRepo);
+        var resetResp = exec("git reset --hard origin/" + branchFirst.getBranchName(), dirRepo);
+        if (!resetResp.get("code").equals("0")) {
+            merge.setInitStdout(resetResp.get("stdout"));
+            merge.setInitCode(resetResp.get("code"));
+            return false;
+        }
+        var chResp = exec("git checkout -f origin/" + branchFirst.getBranchName(), dirRepo);
+        if (!chResp.get("code").equals("0")) {
+            merge.setInitStdout(chResp.get("stdout"));
+            merge.setInitCode(chResp.get("code"));
+            return false;
+        }
 
         for (var branch : merge.getBranches()) {
             if (branch.isMergeLocal() && !branch.isMergeLocalSuccess()) {
-                logger.trace("Skip branch `{}`. Merge with error.", branch.getBranchName());
+                log.trace("Skip branch `{}`. Merge with error.", branch.getBranchName());
                 continue;
             }
+            branch.setCommits(getCommits(branch, dirRepo));
+
             var msg = "Merge branch '" + branch.getBranchName() + "' into stage '" + configuration.getStage().getBranchName() + "'";
             var resp = exec("git merge -m \"" + msg + "\" origin/" + branch.getBranchName(), dirRepo);
             var success = resp.get("code").equals("0");
@@ -138,7 +166,29 @@ public class MergeService {
         return true;
     }
 
-    private HashMap<String, String> exec(String cmd, File workdir) throws InterruptedException, IOException {
+    private static List<Merge.Branch.Commit> getCommits(Merge.Branch branch, File dirRepo) throws IOException, InterruptedException {
+        var commits = new ArrayList<Merge.Branch.Commit>();
+        var cmdLog = MessageFormat.format("git log --pretty=format:\"%H|||%ce|||%ci|||%f\" origin/{1}..origin/{0}", branch.getBranchName(), branch.getTargetBranchName());
+        var respLog = exec(cmdLog, dirRepo);
+        var data = respLog.get("stdout").trim();
+        if (data.isEmpty()) {
+            return commits;
+        }
+        Arrays.stream(data.split("\n")).forEach(row -> {
+            var parts = row.trim().split(Pattern.quote("|||"));
+            if (!parts[0].isEmpty() && !parts[1].isEmpty() && !parts[2].isEmpty() && parts.length > 3) {
+                commits.add(Merge.Branch.Commit.builder()
+                        .hash(parts[0].trim())
+                        .committerEmail(parts[1].trim())
+                        .committerDate(parts[2].trim())
+                        .subject(parts[3].trim())
+                        .build());
+            }
+        });
+        return commits;
+    }
+
+    private static HashMap<String, String> exec(String cmd, File workdir) throws InterruptedException, IOException {
         var timer = Stopwatch.createStarted();
         ProcessBuilder builder = new ProcessBuilder();
         builder.directory(workdir);
@@ -160,7 +210,7 @@ public class MergeService {
             outStr.append(System.lineSeparator());
         }
         int exitCode = process.waitFor();
-        logger.trace("Execute: `{}`, code: {}, time: {} workdir: {}", cmd, exitCode, timer.stop(), workdir.getPath());
+        log.trace("Execute: `{}`, code: {}, time: {} workdir: {}", cmd, exitCode, timer.stop(), workdir.getPath());
 
         var result = new HashMap<String, String>();
         result.put("stdout", outStr.toString().trim());

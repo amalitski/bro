@@ -8,8 +8,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.util.Assert;
+import org.springframework.util.DigestUtils;
 import ru.timebook.bro.flow.configurations.Configuration;
 import ru.timebook.bro.flow.modules.build.*;
+import ru.timebook.bro.flow.utils.GravatarUtil;
 import ru.timebook.bro.flow.utils.StringUtil;
 
 import javax.ws.rs.client.Client;
@@ -58,6 +60,15 @@ class FlowApplicationTests {
         var localDate = ZonedDateTime.now().plusSeconds(duration.getSeconds());
         logger.info("result: {}", localDate.format(DateTimeFormatter.ofPattern("yyyyMMdd HH:mm Z")));
     }
+
+    @Test
+    void gravatarHashTest() {
+        var email = "bender.rodriguesz@mail.zone";
+        var uri = GravatarUtil.getUri(email, 50);
+        Assert.isTrue(uri.contains("ed1c4c31a6bd71ea498394438d37f444"), "Hash part success calculates");
+        Assert.isTrue(uri.contains("size=50"), "Size exists");
+    }
+
     @Test
     void databaseTest() {
 //        var pList = new ArrayList<Project>();

@@ -1,11 +1,11 @@
 package ru.timebook.bro.flow.modules.git;
 
 import com.google.common.collect.Lists;
+import lombok.extern.slf4j.Slf4j;
 import org.gitlab4j.api.GitLabApi;
 import org.gitlab4j.api.ProxyClientConfig;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import ru.timebook.bro.flow.configurations.Configuration;
 import ru.timebook.bro.flow.modules.taskTracker.Issue;
 
@@ -14,10 +14,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class GitlabGitRepository implements GitRepository {
     private final Configuration.Repositories.Gitlab config;
-    private final static Logger logger = LoggerFactory.getLogger(GitlabGitRepository.class);
     private GitLabApi gitLabApi;
 
     public GitlabGitRepository(Configuration configuration) {
@@ -29,7 +29,7 @@ public class GitlabGitRepository implements GitRepository {
         issues.forEach(i -> {
             i.getPullRequests().forEach(this::getPullRequestInfo);
         });
-        logger.trace("Issues information loaded");
+        log.trace("Issues information loaded");
     }
 
     public void getPullRequestInfo(Issue.PullRequest pullRequest) {
@@ -43,7 +43,6 @@ public class GitlabGitRepository implements GitRepository {
             var projectName = prInfo.get("project");
             var project = api.getProjectApi().getProject(projectName);
             var mergeRequest = api.getMergeRequestApi().getMergeRequest(projectName, mergeRequestId);
-
             pullRequest.setProjectName(projectName);
             pullRequest.setHttpUrlRepo(project.getHttpUrlToRepo());
             pullRequest.setSshUrlRepo(project.getSshUrlToRepo());
@@ -51,7 +50,7 @@ public class GitlabGitRepository implements GitRepository {
             pullRequest.setTargetBranchName(mergeRequest.getTargetBranch());
             pullRequest.setMerged(mergeRequest.getState().equals("merged"));
         } catch (Exception e) {
-            logger.error("Catch exception", e);
+            log.error("Catch exception", e);
         }
     }
 
@@ -92,6 +91,16 @@ public class GitlabGitRepository implements GitRepository {
         return config.isEnabled();
     }
 
+    public String getCommitterAvatarUri(String email)  {
+        RestTemplate restTemplate = new RestTemplate();
+        var result = restTemplate.getForObject(String.format("%s/api/v4/avatar?email=%s&size=50", config.getHost(), email), HashMap.class);
+        assert result != null;
+        if (result.containsKey("avatar_url")) {
+            return result.get("avatar_url").toString();
+        }
+        return "";
+    }
+
     public List<Merge> getMerge(List<Issue> issues) {
         var map = new HashMap<String, Merge>();
         for (var i : issues) {
@@ -99,10 +108,11 @@ public class GitlabGitRepository implements GitRepository {
                 if (pr.getSourceBranchName() == null) {
                     continue;
                 }
+                pr.setGitRepositoryClazz(this);
                 Merge merge;
                 if (map.containsKey(pr.getProjectName())) {
                     merge = map.get(pr.getProjectName());
-                    merge.getBranches().add(Merge.Branch.builder().branchName(pr.getSourceBranchName()).build());
+                    merge.getBranches().add(Merge.Branch.builder().branchName(pr.getSourceBranchName()).targetBranchName(pr.getTargetBranchName()).build());
                     map.remove(pr.getProjectName());
                 } else {
                     var branches = new LinkedHashSet<String>();
@@ -110,7 +120,7 @@ public class GitlabGitRepository implements GitRepository {
                     rep.ifPresent(repository -> branches.addAll(repository.getPreMerge()));
                     branches.add(pr.getSourceBranchName());
                     merge = Merge.builder()
-                            .branches(branches.stream().map(v -> Merge.Branch.builder().branchName(v).build()).collect(Collectors.toList()))
+                            .branches(branches.stream().map(v -> Merge.Branch.builder().branchName(v).targetBranchName(pr.getTargetBranchName()).build()).collect(Collectors.toList()))
                             .projectName(pr.getProjectName())
                             .httpUrlRepo(pr.getHttpUrlRepo())
                             .sshUrlRepo(pr.getSshUrlRepo())
@@ -120,11 +130,14 @@ public class GitlabGitRepository implements GitRepository {
                 map.put(pr.getProjectName(), merge);
             }
         }
-        logger.debug("Merge count: {}", map.size());
+        log.debug("Merge count: {}", map.size());
         return new ArrayList<>(map.values());
     }
 
     private Optional<Configuration.Repositories.Gitlab.Repository> getPreMergeBranch(String projectName) {
+        if (config.getRepositories() == null) {
+            return Optional.empty();
+        }
         return config.getRepositories().stream().filter(r -> r.getPath().equals(projectName)).findFirst();
     }
 }

@@ -22,8 +22,8 @@ public class BuildHasProject {
     @JoinColumn(name = "buildId")
     private Build build;
 
-    @ManyToOne
-    @JoinColumn(name = "projectId")
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "projectId", nullable = false)
     private Project project;
 
     @Column(nullable = true)

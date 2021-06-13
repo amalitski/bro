@@ -3,11 +3,11 @@ package ru.timebook.bro.flow.modules.taskTracker;
 import com.taskadapter.redmineapi.RedmineException;
 import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.timebook.bro.flow.configurations.Configuration;
 import ru.timebook.bro.flow.utils.DateTimeUtil;
+import ru.timebook.bro.flow.utils.GravatarUtil;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -16,10 +16,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class RedmineTaskTracker implements TaskTracker {
     private final Configuration.TaskTrackers.Redmine rmConfig;
-    private final static Logger logger = LoggerFactory.getLogger(RedmineTaskTracker.class);
     private final RedmineManager manager;
 
     public RedmineTaskTracker(Configuration configuration) {
@@ -31,7 +31,7 @@ public class RedmineTaskTracker implements TaskTracker {
     }
 
     @Override
-    public boolean isEnabled(){
+    public boolean isEnabled() {
         return rmConfig.isEnabled();
     }
 
@@ -48,9 +48,9 @@ public class RedmineTaskTracker implements TaskTracker {
                 }
             }
         } catch (RedmineException e) {
-            logger.error("Redmine error", e);
+            log.error("Redmine error", e);
         }
-        logger.debug("Issues for merge: {}", listIssues.size());
+        log.debug("Issues for merge: {}", listIssues.size());
         return listIssues;
     }
 
@@ -76,12 +76,25 @@ public class RedmineTaskTracker implements TaskTracker {
             if (DateTimeUtil.toLocalDate(i.getUpdatedOn()).isBefore(afterDate)) {
                 continue;
             }
+
+            // i.getAuthor() doesnt loaded email address
+            var aFull = manager.getUserManager().getUserById(i.getAuthor().getId());
+            var avatar = (aFull.getMail() != null) ? GravatarUtil.getUri(aFull.getMail(), 50) : null;
+            var a = Issue.Author.builder()
+                    .id(String.valueOf(i.getAuthor().getId()))
+                    .avatarUri(avatar)
+                    .profileUri(String.format("%s/users/%s", rmConfig.getHost(), i.getAuthor().getId()))
+                    .visibleName(String.format("%s", i.getAuthor().getFullName()))
+                    .build();
+
             var row = Issue.builder()
                     .id(String.valueOf(i.getId()))
+                    .uri(String.format("%s/issues/%s", rmConfig.getHost(), i.getId()))
                     .subject(i.getSubject())
                     .taskTracker(this)
-                    .taskTrackerClazz(this.getClass())
-                    ;
+                    .author(a)
+                    .taskTrackerClazz(this.getClass());
+
             for (var f : i.getCustomFields()) {
                 if (customFieldsIds.contains(String.valueOf(f.getId()))) {
                     var pr = Issue.PullRequest.builder().uri(f.getValue()).name(f.getName()).build();
