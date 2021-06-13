@@ -14,6 +14,7 @@ import ru.timebook.bro.flow.utils.JsonUtil;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 @Slf4j
 @Service
@@ -70,19 +71,15 @@ public class ExecutionService {
     private void  createBuild(List<Issue> issues, List<Merge> merges){
         var b = buildRepository.save(Build.builder().issuesJson(JsonUtil.serialize(issues)).startAt(LocalDateTime.now()).build());
         var buildHasProjects = merges.stream().map(m -> {
-            var p = projectRepository.findByName(m.getProjectName());
-            if (p.isEmpty()) {
-                return null;
+            var p = projectRepository.findByName(m.getProjectName()).orElse(Project.builder().name(m.getProjectName()).buildCheckSum("").build());
+            if (p.getId() != null && m.getCheckSum() != null) {
+                p.setBuildCheckSum(m.getCheckSum());
             }
-            return BuildHasProject.builder()
-                    .project(p.get())
-                    .build(b)
-                    .mergesJson(JsonUtil.serialize(m))
-                    .mergeCheckSum(m.getCheckSum())
-                    .build();
+            p = projectRepository.save(p);
+            return BuildHasProject.builder().project(p).build(b).mergesJson(JsonUtil.serialize(m)).mergeCheckSum(m.getCheckSum()).build();
         }).filter(Objects::nonNull).collect(Collectors.toList());
-
         buildHasProjectRepository.saveAll(buildHasProjects);
+        log.trace("Build saved. Id: {}, buildHasProjects.size(): {}", b.getId(), buildHasProjects.size());
     }
 
     public void setDeployed(List<Issue> issues) {

@@ -3,9 +3,7 @@ package ru.timebook.bro.flow.modules.git;
 import lombok.*;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 @Data
 @Builder
@@ -21,9 +19,17 @@ public class Merge {
     private String checkSum;
     private String log;
     private Push push;
+    private String initStdout;
+    private String initCode;
+
+    private String getProjectShortName(){
+        return this.projectName.substring(0,1).toUpperCase();
+    }
 
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class Push {
         private boolean pushed;
         private String log;

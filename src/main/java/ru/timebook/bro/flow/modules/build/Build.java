@@ -4,7 +4,6 @@ import lombok.*;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
-import java.util.HashSet;
 import java.util.Set;
 
 @Data
@@ -17,8 +16,9 @@ public class Build {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
-    @OneToMany(mappedBy = "build")
-    Set<BuildHasProject> buildHasProjects;
+    @EqualsAndHashCode.Exclude
+    @OneToMany(mappedBy = "build", fetch = FetchType.LAZY)
+    private Set<BuildHasProject> buildHasProjects;
     @Lob
     @Column
     private String issuesJson;

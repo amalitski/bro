@@ -5,11 +5,9 @@ import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.DigestUtils;
 import ru.timebook.bro.flow.configurations.Configuration;
 import ru.timebook.bro.flow.utils.DateTimeUtil;
 import ru.timebook.bro.flow.utils.GravatarUtil;
-import ru.timebook.bro.flow.utils.JsonUtil;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -33,7 +31,7 @@ public class RedmineTaskTracker implements TaskTracker {
     }
 
     @Override
-    public boolean isEnabled(){
+    public boolean isEnabled() {
         return rmConfig.isEnabled();
     }
 
@@ -85,13 +83,13 @@ public class RedmineTaskTracker implements TaskTracker {
             var a = Issue.Author.builder()
                     .id(String.valueOf(i.getAuthor().getId()))
                     .avatarUri(avatar)
-                    .profileUri(String.format("%s/users/%s",  rmConfig.getHost(), i.getAuthor().getId()))
-                    .visibleName(String.format("%s",  i.getAuthor().getFullName()))
+                    .profileUri(String.format("%s/users/%s", rmConfig.getHost(), i.getAuthor().getId()))
+                    .visibleName(String.format("%s", i.getAuthor().getFullName()))
                     .build();
 
             var row = Issue.builder()
                     .id(String.valueOf(i.getId()))
-                    .uri(String.format("%s/issues/%s",  rmConfig.getHost(), i.getId()))
+                    .uri(String.format("%s/issues/%s", rmConfig.getHost(), i.getId()))
                     .subject(i.getSubject())
                     .taskTracker(this)
                     .author(a)

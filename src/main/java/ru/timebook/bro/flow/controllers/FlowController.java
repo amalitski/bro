@@ -1,4 +1,4 @@
-package ru.timebook.bro.app.controllers;
+package ru.timebook.bro.flow.controllers;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,10 +20,7 @@ public class FlowController {
     @GetMapping(path = "/flow")
     public ModelAndView index(Map<String, Object> model) throws Exception {
         var b = flowService.getLastBuild();
-        model.put("issues", b.getIssues());
-        model.put("issuesSuccess", b.getIssuesSuccess());
-        model.put("issuesFails", b.getIssuesFails());
-        model.put("buildStartAt", b.getBuildStartAt());
+        model.put("data", b);
         return new ModelAndView("index", model);
     }
 }

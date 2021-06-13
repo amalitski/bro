@@ -6,8 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
-import java.time.LocalDateTime;
-import java.util.Set;
 
 
 @Data
@@ -24,6 +22,4 @@ public class Project {
     private String name;
     @Column(nullable = false)
     private String buildCheckSum;
-    @Column(nullable = false)
-    private LocalDateTime pushedAt;
 }

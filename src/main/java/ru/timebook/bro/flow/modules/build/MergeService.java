@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.springframework.stereotype.Service;
 import ru.timebook.bro.flow.configurations.Configuration;
-import ru.timebook.bro.flow.modules.git.GitRepository;
 import ru.timebook.bro.flow.modules.taskTracker.Issue;
 import ru.timebook.bro.flow.modules.git.Merge;
 import ru.timebook.bro.flow.utils.DateTimeUtil;
@@ -14,10 +13,8 @@ import ru.timebook.bro.flow.utils.StringUtil;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -51,8 +48,8 @@ public class MergeService {
         if (configuration.getStage().getBranchName().isEmpty() || configuration.getStage().getPushCmd().isEmpty()) {
             throw new Exception("Invalid configuration: bro.flow.stage.branchName or bro.flow.stage.pushCmd empty!");
         }
-        var project = projectRepository.findByName(merge.getProjectName()).orElse(new Project());
-        if (project.getId() != null && project.getBuildCheckSum().equals(merge.getCheckSum())) {
+        var project = projectRepository.findByName(merge.getProjectName());
+        if (project.isPresent() && project.get().getBuildCheckSum().equals(merge.getCheckSum())) {
             return;
         }
 
@@ -60,13 +57,9 @@ public class MergeService {
         var resp = exec(cmd, merge.getDirRepo());
         merge.getPush().setLog(resp.get("stdout"));
         merge.getPush().setPushed(resp.get("code").equals("0"));
-        project.setName(merge.getProjectName());
-        project.setBuildCheckSum(merge.getCheckSum());
         if (merge.getPush().isPushed()) {
-            project.setPushedAt(LocalDateTime.now());
             log.debug("Pushed project {}:{}", merge.getProjectName(), configuration.getStage().getBranchName());
         }
-        projectRepository.save(project);
     }
 
     public static Optional<Merge.Branch> getBranchByPr(Issue.PullRequest pr, List<Merge> merges) {
@@ -104,7 +97,12 @@ public class MergeService {
         }
         var f = dir.listFiles();
         if (f != null && f.length == 0) {
-            exec("git clone " + merge.getSshUrlRepo() + " ./", dir);
+            var resp = exec("git clone " + merge.getSshUrlRepo() + " ./", dir);
+            if (!resp.get("code").equals("0")) {
+                merge.setInitStdout(resp.get("stdout"));
+                merge.setInitCode(resp.get("code"));
+                throw new Exception(String.format("Clone %s repository with error. See logs for detail information. ", merge.getSshUrlRepo()));
+            }
         }
     }
 
@@ -133,8 +131,18 @@ public class MergeService {
 
     private boolean mergeRecursive(Merge merge, File dirRepo) throws InterruptedException, IOException {
         var branchFirst = merge.getBranches().stream().findFirst().get();
-        exec("git reset --hard origin/" + branchFirst.getBranchName(), dirRepo);
-        exec("git checkout -f origin/" + branchFirst.getBranchName(), dirRepo);
+        var resetResp = exec("git reset --hard origin/" + branchFirst.getBranchName(), dirRepo);
+        if (!resetResp.get("code").equals("0")) {
+            merge.setInitStdout(resetResp.get("stdout"));
+            merge.setInitCode(resetResp.get("code"));
+            return false;
+        }
+        var chResp = exec("git checkout -f origin/" + branchFirst.getBranchName(), dirRepo);
+        if (!chResp.get("code").equals("0")) {
+            merge.setInitStdout(chResp.get("stdout"));
+            merge.setInitCode(chResp.get("code"));
+            return false;
+        }
 
         for (var branch : merge.getBranches()) {
             if (branch.isMergeLocal() && !branch.isMergeLocalSuccess()) {

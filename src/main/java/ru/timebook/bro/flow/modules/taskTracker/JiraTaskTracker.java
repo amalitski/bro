@@ -8,7 +8,6 @@ import com.atlassian.jira.rest.client.internal.async.AsynchronousJiraRestClientF
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.timebook.bro.flow.configurations.Configuration;
-import ru.timebook.bro.flow.utils.GravatarUtil;
 
 import java.net.URI;
 import java.util.ArrayList;

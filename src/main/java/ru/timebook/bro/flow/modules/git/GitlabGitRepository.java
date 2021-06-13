@@ -3,10 +3,7 @@ package ru.timebook.bro.flow.modules.git;
 import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 import org.gitlab4j.api.GitLabApi;
-import org.gitlab4j.api.GitLabApiException;
 import org.gitlab4j.api.ProxyClientConfig;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import ru.timebook.bro.flow.configurations.Configuration;
@@ -46,7 +43,6 @@ public class GitlabGitRepository implements GitRepository {
             var projectName = prInfo.get("project");
             var project = api.getProjectApi().getProject(projectName);
             var mergeRequest = api.getMergeRequestApi().getMergeRequest(projectName, mergeRequestId);
-
             pullRequest.setProjectName(projectName);
             pullRequest.setHttpUrlRepo(project.getHttpUrlToRepo());
             pullRequest.setSshUrlRepo(project.getSshUrlToRepo());
@@ -98,7 +94,11 @@ public class GitlabGitRepository implements GitRepository {
     public String getCommitterAvatarUri(String email)  {
         RestTemplate restTemplate = new RestTemplate();
         var result = restTemplate.getForObject(String.format("%s/api/v4/avatar?email=%s&size=50", config.getHost(), email), HashMap.class);
-        return result.get("avatar_url").toString();
+        assert result != null;
+        if (result.containsKey("avatar_url")) {
+            return result.get("avatar_url").toString();
+        }
+        return "";
     }
 
     public List<Merge> getMerge(List<Issue> issues) {
@@ -135,6 +135,9 @@ public class GitlabGitRepository implements GitRepository {
     }
 
     private Optional<Configuration.Repositories.Gitlab.Repository> getPreMergeBranch(String projectName) {
+        if (config.getRepositories() == null) {
+            return Optional.empty();
+        }
         return config.getRepositories().stream().filter(r -> r.getPath().equals(projectName)).findFirst();
     }
 }

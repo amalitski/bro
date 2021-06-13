@@ -19,6 +19,7 @@ public class DateTimeUtil {
         LocalDateTime conv = LocalDateTime.ofInstant(date.toInstant(), ZoneId.systemDefault());
         return conv.toLocalDate();
     }
+
     public static String formatFull(LocalDateTime date) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:ss");
         return date.format(formatter);
