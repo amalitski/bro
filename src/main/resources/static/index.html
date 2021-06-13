@@ -7,26 +7,18 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
     <!-- App favicon -->
     <link rel="shortcut icon" href="../assets/images/favicon.ico">
-
     <!-- Plugins css -->
     <link href="../assets/libs/dropzone/min/dropzone.min.css" rel="stylesheet" type="text/css"/>
-
     <!-- App css -->
     <link href="../assets/css/bootstrap-creative.min.css" rel="stylesheet" type="text/css" id="bs-default-stylesheet"/>
     <link href="../assets/css/app-creative.min.css" rel="stylesheet" type="text/css" id="app-default-stylesheet"/>
-
-    <link href="../assets/css/bootstrap-creative-dark.min.css" rel="stylesheet" type="text/css" id="bs-dark-stylesheet"
-          disabled/>
-    <link href="../assets/css/app-creative-dark.min.css" rel="stylesheet" type="text/css" id="app-dark-stylesheet"
-          disabled/>
-
+    <link href="../assets/css/bootstrap-creative-dark.min.css" rel="stylesheet" type="text/css" id="bs-dark-stylesheet" disabled/>
+    <link href="../assets/css/app-creative-dark.min.css" rel="stylesheet" type="text/css" id="app-dark-stylesheet" disabled/>
     <!-- icons -->
     <link href="../assets/css/icons.min.css" rel="stylesheet" type="text/css"/>
-
 </head>
 
-<body data-layout-mode="horizontal"
-      data-layout='{"mode": "light", "width": "fluid", "menuPosition": "fixed", "topbar": {"color": "dark"}, "showRightSidebarOnPageLoad": true}'>
+<body data-layout-mode="horizontal" data-layout='{"mode": "light", "width": "fluid", "menuPosition": "fixed", "topbar": {"color": "dark"}, "showRightSidebarOnPageLoad": true}'>
 
 <!-- Begin page -->
 <div id="wrapper">
@@ -137,14 +129,29 @@
                                     <li class="breadcrumb-item"><a href="javascript: void(0);">Merge&Deploy</a></li>
                                     <li class="breadcrumb-item"><a href="javascript: void(0);">Last activity</a></li>
 
-                                    <li class="breadcrumb-item active">{{buildStartAt}}</li>
+                                    <li class="breadcrumb-item active">{{#buildStartAt}}{{buildStartAt}}{{/buildStartAt}}{{^buildStartAt}}-{{/buildStartAt}}</li>
                                 </ol>
                             </div>
                         </div>
                     </div>
                 </div>
                 <!-- end page title -->
-
+                {{^buildStartAt}}
+                <div class="row">
+                    <div class="col-md-12">
+                    <div class="card text-white bg-danger text-xs-center">
+                        <div class="card-body">
+                            <blockquote class="card-bodyquote">
+                                <p>Нет данных для отображения.</p>
+                                <footer>Для отображения данных необходимо запустить Сборщик Задач.</cite>
+                                </footer>
+                            </blockquote>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+                {{/buildStartAt}}
+                {{#buildStartAt}}
                 <div class="row">
                     <div class="col-xl-8 col-lg-7">
                         <!-- project card -->
@@ -160,7 +167,7 @@
                                         </li>
                                         <li class="list-inline-item pe-2">
                                             <i class="mdi mdi-check font-16 me-1"></i> {{issuesSuccess}}
-                                        </li>
+                                        </li>r
                                     </ul>
                                 </div>
                                 {{#issues}}
@@ -236,8 +243,7 @@
                                                 </div>
                                             </div>
                                             <div class="col pl-0">
-                                                <a href="javascript:void(0);" class="text-muted font-weight-bold">Андрей
-                                                    Малицкий</a>
+                                                <a href="javascript:void(0);" class="text-muted font-weight-bold">Андрей Малицкий</a>
                                                 <i class="float-right mdi mdi-star mdi-24px icon-dual-danger"></i>
                                                 <p class="mb-0 font-12"><a href="#">@andrew.malitski</a></p>
                                             </div>
@@ -268,6 +274,7 @@
                         </div>
                     </div>
                 </div>
+                {{/buildStartAt}}
                 <!-- end row -->
             </div> <!-- container -->
         </div> <!-- content -->

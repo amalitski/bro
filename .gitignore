@@ -1,7 +1,8 @@
 .idea
 .m2
 *.iml
-target
+*.db
+/target
 /docker-compose.override.yml
 /application.properties
 /application.yml

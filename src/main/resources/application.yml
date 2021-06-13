@@ -69,7 +69,6 @@ spring:
   mustache:
     suffix: .html
     prefix: classpath:/static/
-
 server:
   tomcat:
     threads:

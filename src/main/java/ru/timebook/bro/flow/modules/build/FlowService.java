@@ -59,7 +59,7 @@ public class FlowService {
     public Response getLastBuild() throws IOException {
         var b = buildRepository.findFirstByOrderByStartAtDesc();
         if (b.isEmpty()) {
-            return Response.builder().build();
+            return Response.builder().issuesSuccess(0).issuesFails(0).build();
         }
         log.info("{}", b.get().getIssuesJson());
         var i = JsonUtil.deserialize(b.get().getIssuesJson(), Issue[].class);
