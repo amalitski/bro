@@ -4,4 +4,6 @@
 *.db
 /target
 /docker-compose.override.yml
+/application.properties
 /application.yml
+/temp
