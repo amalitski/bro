@@ -40,8 +40,10 @@ public class MergeService {
     public void clean(List<Merge> merges) {
         merges.parallelStream().forEach(merge -> {
             try {
-                FileUtils.deleteDirectory(merge.getDirMerge());
-                log.trace("Delete dir: {}", merge.getDirMerge());
+                if (merge.getDirMerge().exists()) {
+                    FileUtils.deleteDirectory(merge.getDirMerge());
+                    log.trace("Delete dir: {}", merge.getDirMerge());
+                }
             } catch (Exception e) {
                 log.error("Merge exception", e);
             }
@@ -108,12 +110,16 @@ public class MergeService {
         var f = dir.listFiles();
         if (f != null && f.length == 0) {
             var resp = exec("git clone " + merge.getSshUrlRepo() + " ./", dir);
+            merge.setInitStdout(getOutPretty(resp));
+            merge.setInitCode(resp.get("code"));
             if (!resp.get("code").equals("0")) {
-                merge.setInitStdout(resp.get("stdout"));
-                merge.setInitCode(resp.get("code"));
                 throw new Exception(String.format("Clone %s repository with error. See logs for detail information. ", merge.getSshUrlRepo()));
             }
         }
+    }
+
+    private String getOutPretty(HashMap<String, String> resp){
+        return String.format("%s (code %s)\n%s", resp.get("cmd"), resp.get("code"), resp.get("stdout"));
     }
 
     private void mergeRepo(Merge merge) throws Exception {
@@ -125,7 +131,12 @@ public class MergeService {
             throw new Exception("Failed to create merge directory: " + dirname);
         } else if (!dirRepo.mkdirs()) {
             throw new Exception("Failed to create repo directory: " + dirRepo.getPath());
-        } else if (!exec("git fetch origin", dirInit).get("code").equals("0")) {
+        }
+        var respFetch = exec("git fetch origin", dirInit);
+        var out = merge.getInitStdout() == null ?
+                getOutPretty(respFetch): String.format("%s\n\n%s", merge.getInitStdout(), getOutPretty(respFetch));
+        merge.setInitStdout(out);
+        if (!respFetch.get("code").equals("0")) {
             throw new Exception("Failed to fetch origin: " + dirInit.getPath());
         }
         merge.setDirRepo(dirRepo);
@@ -224,6 +235,7 @@ public class MergeService {
         }
 
         var result = new HashMap<String, String>();
+        result.put("cmd", cmd);
         try {
             int exitCode = process.waitFor();
             result.put("stdout", outStr.toString().trim());

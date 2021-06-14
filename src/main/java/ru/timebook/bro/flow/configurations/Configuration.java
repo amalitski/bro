@@ -25,6 +25,7 @@ public class Configuration {
         private String tempDir;
         private String pushCmd;
         private String cronReceive;
+        private String basePath;
     }
 
     @Data
@@ -40,6 +41,7 @@ public class Configuration {
             private List<Status> statuses;
             private List<Tracker> trackers;
             private List<CustomField> customFields;
+            private int timeout;
             private boolean enabled;
 
             @Data
@@ -88,6 +90,7 @@ public class Configuration {
             private boolean enableRequestLogging;
             private Stage stage;
             private List<Repository> repositories;
+            private int timeout;
             private boolean enabled;
 
             @Data

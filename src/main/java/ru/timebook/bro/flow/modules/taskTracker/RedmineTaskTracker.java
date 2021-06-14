@@ -4,6 +4,7 @@ import com.taskadapter.redmineapi.RedmineException;
 import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.http.config.SocketConfig;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.springframework.stereotype.Service;
@@ -21,11 +22,11 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class RedmineTaskTracker implements TaskTracker {
-    private final Configuration.TaskTrackers.Redmine rmConfig;
+    private final Configuration.TaskTrackers.Redmine config;
     private  RedmineManager api;
 
    public RedmineTaskTracker(Configuration configuration) {
-        this.rmConfig = configuration.getTaskTrackers().getRedmine();
+        this.config = configuration.getTaskTrackers().getRedmine();
     }
 
     public RedmineManager getApi(){
@@ -33,8 +34,11 @@ public class RedmineTaskTracker implements TaskTracker {
            var cxMgr = new PoolingHttpClientConnectionManager();
            cxMgr.setMaxTotal(100);
            cxMgr.setDefaultMaxPerRoute(20);
-           var client= HttpClients.custom().setConnectionManager(cxMgr).build();
-           this.api = RedmineManagerFactory.createWithApiKey(rmConfig.getHost(), rmConfig.getApiKey(), client);
+           var client= HttpClients.custom()
+                   .setConnectionManager(cxMgr)
+                   .setDefaultSocketConfig(SocketConfig.custom().setSoTimeout(config.getTimeout()).build())
+                   .build();
+           this.api = RedmineManagerFactory.createWithApiKey(config.getHost(), config.getApiKey(), client);
            this.api.setObjectsPerPage(100);
        }
        return this.api;
@@ -42,15 +46,15 @@ public class RedmineTaskTracker implements TaskTracker {
 
     @Override
     public boolean isEnabled() {
-        return rmConfig.isEnabled();
+        return config.isEnabled();
     }
 
     @Override
     public List<Issue> getForMerge() {
         var listIssues = new ArrayList<Issue>();
         try {
-            for (var t : rmConfig.getTrackers()) {
-                for (var s : rmConfig.getStatuses()) {
+            for (var t : config.getTrackers()) {
+                for (var s : config.getStatuses()) {
                     if (s.isNeedMerge()) {
                         var i = getIssues(s.getId(), t.getId());
                         listIssues.addAll(i);
@@ -76,7 +80,7 @@ public class RedmineTaskTracker implements TaskTracker {
         params.put("sort", "updated_on:desc");
 
         var customFieldsIds = getCustomFieldsIds();
-        var duration = Duration.parse(rmConfig.getAfterUpdateTime());
+        var duration = Duration.parse(config.getAfterUpdateTime());
         var afterDate = LocalDate.now().plusDays(duration.toDays());
 
         var listIssues = new ArrayList<Issue>();
@@ -91,13 +95,13 @@ public class RedmineTaskTracker implements TaskTracker {
             var a = Issue.Author.builder()
                     .id(String.valueOf(i.getAuthor().getId()))
                     .avatarUri(avatar)
-                    .profileUri(String.format("%s/users/%s", rmConfig.getHost(), i.getAuthor().getId()))
+                    .profileUri(String.format("%s/users/%s", config.getHost(), i.getAuthor().getId()))
                     .visibleName(String.format("%s", i.getAuthor().getFullName()))
                     .build();
 
             var row = Issue.builder()
                     .id(String.valueOf(i.getId()))
-                    .uri(String.format("%s/issues/%s", rmConfig.getHost(), i.getId()))
+                    .uri(String.format("%s/issues/%s", config.getHost(), i.getId()))
                     .subject(i.getSubject())
                     .taskTracker(this)
                     .author(a)
@@ -115,7 +119,7 @@ public class RedmineTaskTracker implements TaskTracker {
     }
 
     private List<String> getCustomFieldsIds() {
-        return rmConfig.getCustomFields().stream()
+        return config.getCustomFields().stream()
                 .map(Configuration.TaskTrackers.Redmine.CustomField::getId).collect(Collectors.toList());
     }
 }
