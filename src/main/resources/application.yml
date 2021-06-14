@@ -7,6 +7,7 @@ bro:
       branchName: stages/${bro.flow.stage.name}
       tempDir: temp
       pushCmd: git push -u origin :${bro.flow.stage.branchName}; git checkout -b ${bro.flow.stage.branchName} && git push -u origin ${bro.flow.stage.branchName}
+      cronReceive: "0 */10 * * * ?"
     task-trackers:
       redmine:
         host: https://redmine.domain.com
@@ -41,6 +42,7 @@ bro:
         proxy:
         enableRequestLogging: false
         enabled: true
+
 logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} %clr(${LOG_LEVEL_PATTERN:%5p}) %msg%n"
@@ -69,6 +71,9 @@ spring:
   mustache:
     suffix: .html
     prefix: classpath:/static/
+  groovy:
+    template:
+      check-template-location: false
 server:
   tomcat:
     threads:

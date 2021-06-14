@@ -2,6 +2,7 @@ package ru.timebook.bro.flow.configurations;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashSet;
@@ -9,6 +10,7 @@ import java.util.List;
 
 @Data
 @Component
+@EnableScheduling
 @ConfigurationProperties("bro.flow")
 public class Configuration {
     private Stage stage;
@@ -22,6 +24,7 @@ public class Configuration {
         private String branchName;
         private String tempDir;
         private String pushCmd;
+        private String cronReceive;
     }
 
     @Data

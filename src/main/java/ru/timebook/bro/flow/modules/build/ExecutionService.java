@@ -14,7 +14,6 @@ import ru.timebook.bro.flow.utils.JsonUtil;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 @Slf4j
 @Service
@@ -59,6 +58,7 @@ public class ExecutionService {
         var merges = gitRepositories.stream().map(v -> v.getMerge(issues)).flatMap(Collection::stream).collect(Collectors.toList());
         mergeService.merge(merges);
 //        mergeService.push(merges);
+        mergeService.clean(merges);
 
         issues.forEach(i -> i.getPullRequests().forEach(pr -> MergeService.getBranchByPr(pr, merges).ifPresent(pr::setBranch)));
         issues.forEach(MergeService::updateCommitters);
@@ -68,7 +68,7 @@ public class ExecutionService {
         return Response.builder().issues(issues).merges(merges).build();
     }
 
-    private void  createBuild(List<Issue> issues, List<Merge> merges){
+    private void createBuild(List<Issue> issues, List<Merge> merges){
         var b = buildRepository.save(Build.builder().issuesJson(JsonUtil.serialize(issues)).startAt(LocalDateTime.now()).build());
         var buildHasProjects = merges.stream().map(m -> {
             var p = projectRepository.findByName(m.getProjectName()).orElse(Project.builder().name(m.getProjectName()).buildCheckSum("").build());
@@ -107,10 +107,15 @@ public class ExecutionService {
             out.append(String.format("  -\t %s:%s",  m.getProjectName(), configuration.getStage().getBranchName())).append("\n");
             out.append(String.format("   \t %s", m.getLog())).append("\n");
         }
+        out.append("---\t initStdOut").append("\n");
+        for (var m : merges) {
+            out.append(String.format("  -\t %s:%s",  m.getProjectName(), configuration.getStage().getBranchName())).append("\n");
+            out.append(String.format("   \t %s", m.getInitStdout())).append("\n");
+        }
         return out.toString();
     }
 
-    private static String prInfoRow(Issue i) {
+    private String prInfoRow(Issue i) {
         var brs = i.getPullRequests().stream().filter(pr -> pr.getSourceBranchName() != null)
                 .map(pr -> pr.getName() + ":" + pr.getBranch().getBranchName() + ":" + pr.getBranch().isMergeLocal())
                 .collect(Collectors.joining(", "));

@@ -120,7 +120,7 @@ public class GitlabGitRepository implements GitRepository {
                     rep.ifPresent(repository -> branches.addAll(repository.getPreMerge()));
                     branches.add(pr.getSourceBranchName());
                     merge = Merge.builder()
-                            .branches(branches.stream().map(v -> Merge.Branch.builder().branchName(v).targetBranchName(pr.getTargetBranchName()).build()).collect(Collectors.toList()))
+                            .branches(branches.stream().map(v -> Merge.Branch.builder().branchName(v).targetBranchName(pr.getTargetBranchName()).merged(pr.getMerged()).build()).collect(Collectors.toList()))
                             .projectName(pr.getProjectName())
                             .httpUrlRepo(pr.getHttpUrlRepo())
                             .sshUrlRepo(pr.getSshUrlRepo())

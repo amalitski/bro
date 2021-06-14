@@ -44,6 +44,7 @@ public class Merge {
         private String targetBranchName;
         private boolean mergeLocal;
         private boolean mergeLocalSuccess;
+        private boolean merged;
         private String stdout;
         private String stderr;
         private String code;

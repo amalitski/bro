@@ -129,14 +129,14 @@
                                     <li class="breadcrumb-item"><a href="javascript: void(0);">Merge&Deploy</a></li>
                                     <li class="breadcrumb-item"><a href="javascript: void(0);">Last activity</a></li>
 
-                                    <li class="breadcrumb-item active">{{#data.buildStartAt}}{{data.buildStartAt}}{{/data.buildStartAt}}{{^data.buildStartAt}}-{{/data.buildStartAt}}</li>
+                                    <li class="breadcrumb-item active">{{#data.lastBuild}}{{data.lastBuild.buildStartAt}}{{/data.lastBuild}}{{^data.lastBuild}}-{{/data.lastBuild}}</li>
                                 </ol>
                             </div>
                         </div>
                     </div>
                 </div>
                 <!-- end page title -->
-                {{^data.buildStartAt}}
+                {{^data.lastBuild}}
                 <div class="row">
                     <div class="col-md-12">
                     <div class="card text-white bg-danger text-xs-center">
@@ -150,8 +150,8 @@
                     </div>
                     </div>
                 </div>
-                {{/data.buildStartAt}}
-                {{#data.buildStartAt}}
+                {{/data.lastBuild}}
+                {{#data.lastBuild.buildStartAt}}
                 <div class="row">
                     <div class="col-xl-8 col-lg-7">
                         <!-- project card -->
@@ -160,13 +160,13 @@
                                 <div class="mt-3 mt-sm-0">
                                     <ul class="list-inline font-13 text-sm-end">
                                         <li class="list-inline-item pe-1">
-                                            <i class="mdi mdi-calendar-month-outline font-16 me-1"></i> {{data.buildStartAt}}
+                                            <i class="mdi mdi-calendar-month-outline font-16 me-1"></i> {{data.lastBuild.buildStartAt}}
                                         </li>
                                         <li class="list-inline-item pe-1">
-                                            <i class="mdi mdi-alert-circle-outline font-16 me-1"></i> {{data.issuesFails}}
+                                            <i class="mdi mdi-alert-circle-outline font-16 me-1"></i> {{data.lastBuild.issuesFails}}
                                         </li>
                                         <li class="list-inline-item pe-2">
-                                            <i class="mdi mdi-check font-16 me-1"></i> {{data.issuesSuccess}}
+                                            <i class="mdi mdi-check font-16 me-1"></i> {{data.lastBuild.issuesSuccess}}
                                         </li>
                                     </ul>
                                 </div>
@@ -197,12 +197,18 @@
                                                     <div class="float-left">
                                                         {{#pullRequests}}
                                                         {{#branch}}
-                                                        {{#mergeLocalSuccess}}
-                                                        <a href="{{uri}}" class="btn btn-xs btn-outline-success btn-rounded">{{branchName}}</a>
-                                                        {{/mergeLocalSuccess}}
-                                                        {{^mergeLocalSuccess}}
-                                                        <a href="{{uri}}" class="btn btn-xs btn-soft-danger">{{branchName}}</a>
-                                                        {{/mergeLocalSuccess}}
+
+                                                        {{#merged}}
+                                                        <a href="{{uri}}" class="btn btn-xs btn-soft-warning">{{branchName}}</a>
+                                                        {{/merged}}
+                                                        {{^merged}}
+                                                            {{#mergeLocalSuccess}}
+                                                            <a href="{{uri}}" class="btn btn-xs btn-outline-success btn-rounded">{{branchName}}</a>
+                                                            {{/mergeLocalSuccess}}
+                                                            {{^mergeLocalSuccess}}
+                                                            <a href="{{uri}}" class="btn btn-xs btn-soft-danger">{{branchName}}</a>
+                                                            {{/mergeLocalSuccess}}
+                                                        {{/merged}}
                                                         {{/branch}}
                                                         {{/pullRequests}}
                                                     </div>
@@ -229,7 +235,7 @@
                     <div class="col-xl-4 col-lg-5">
                         <div class="card">
                             <div class="card-body">
-                                <h5 class="card-title font-16 mb-3">Contributors (46)</h5>
+                                <h5 class="card-title font-16 mb-3">Contributors (2)</h5>
                                 <div class="card mb-1 shadow-none border">
                                     <div class="p-2">
                                         <div class="row align-items-center">
@@ -255,14 +261,13 @@
                                             <div class="col-auto">
                                                 <div class="avatar-sm">
                                                             <span class="avatar-title badge-soft-primary text-primary rounded">
-                                                                <img src="../assets/images/users/user-11.jpg"
+                                                                <img src="../assets/images/users/bro-red.png"
                                                                      alt="user-image" class="avatar-sm rounded">
                                                             </span>
                                                 </div>
                                             </div>
                                             <div class="col pl-0">
-                                                <a href="javascript:void(0);" class="text-muted font-weight-bold">Bender
-                                                    Rodriguez</a>
+                                                <a href="javascript:void(0);" class="text-muted font-weight-bold">Bender Rodriguez</a>
                                                 <p class="mb-0 font-12"><a href="#">@bender</a></p>
                                             </div>
                                         </div>
@@ -290,7 +295,7 @@
                                                 </a>
                                             </div>
                                             <div class="mt-1 collapse col-12" id="project-detail-1">
-                                                <pre>{{initStdout}}</pre>
+                                                <pre>{{#initStdout}}{{initStdout}}{{/initStdout}}</pre>
                                             </div>
                                         </div>
                                     </div>
@@ -299,9 +304,25 @@
                             </div>
                         </div>
 
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title font-16 mb-3">Builds ({{data.builds.size}})</h5>
+                                <ol class="list-group list-group-numbered">
+                                {{#data.builds}}
+                                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                                        <div class="ms-2 me-auto">
+                                            <div class="fw-bold">#{{id}} at {{buildStartAt}}</div>
+                                        </div>
+                                        <span class="badge bg-primary text-white rounded-pill" title="Count success / fails builds">{{issuesSuccess}} / {{issuesFails}}</span>
+                                    </li>
+                                {{/data.builds}}
+                                </ol>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
-                {{/data.buildStartAt}}
+                {{/data.lastBuild.buildStartAt}}
                 <!-- end row -->
             </div> <!-- container -->
         </div> <!-- content -->

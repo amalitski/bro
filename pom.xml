@@ -6,7 +6,7 @@
     <groupId>ru.timebook</groupId>
     <artifactId>bro</artifactId>
     <name>Project Bro</name>
-    <version>0.2.1-SNAPSHOT</version>
+    <version>0.2.2</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

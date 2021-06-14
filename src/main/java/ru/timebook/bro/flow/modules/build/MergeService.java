@@ -37,6 +37,16 @@ public class MergeService {
             }
         });
     }
+    public void clean(List<Merge> merges) {
+        merges.parallelStream().forEach(merge -> {
+            try {
+                FileUtils.deleteDirectory(merge.getDirMerge());
+                log.trace("Delete dir: {}", merge.getDirMerge());
+            } catch (Exception e) {
+                log.error("Merge exception", e);
+            }
+        });
+    }
 
     public void push(List<Merge> merges) throws Exception {
         for (var merge : merges) {
@@ -149,8 +159,11 @@ public class MergeService {
                 log.trace("Skip branch `{}`. Merge with error.", branch.getBranchName());
                 continue;
             }
+            if (branch.isMerged()) {
+                log.trace("Skip branch `{}`. The branch was merged.", branch.getBranchName());
+                continue;
+            }
             branch.setCommits(getCommits(branch, dirRepo));
-
             var msg = "Merge branch '" + branch.getBranchName() + "' into stage '" + configuration.getStage().getBranchName() + "'";
             var resp = exec("git merge -m \"" + msg + "\" origin/" + branch.getBranchName(), dirRepo);
             var success = resp.get("code").equals("0");
@@ -166,7 +179,7 @@ public class MergeService {
         return true;
     }
 
-    private static List<Merge.Branch.Commit> getCommits(Merge.Branch branch, File dirRepo) throws IOException, InterruptedException {
+    private List<Merge.Branch.Commit> getCommits(Merge.Branch branch, File dirRepo) throws IOException, InterruptedException {
         var commits = new ArrayList<Merge.Branch.Commit>();
         var cmdLog = MessageFormat.format("git log --pretty=format:\"%H|||%ce|||%ci|||%f\" origin/{1}..origin/{0}", branch.getBranchName(), branch.getTargetBranchName());
         var respLog = exec(cmdLog, dirRepo);
@@ -176,7 +189,7 @@ public class MergeService {
         }
         Arrays.stream(data.split("\n")).forEach(row -> {
             var parts = row.trim().split(Pattern.quote("|||"));
-            if (!parts[0].isEmpty() && !parts[1].isEmpty() && !parts[2].isEmpty() && parts.length > 3) {
+            if (parts.length > 3 && !parts[0].isEmpty() && !parts[1].isEmpty() && !parts[2].isEmpty()) {
                 commits.add(Merge.Branch.Commit.builder()
                         .hash(parts[0].trim())
                         .committerEmail(parts[1].trim())
@@ -188,7 +201,7 @@ public class MergeService {
         return commits;
     }
 
-    private static HashMap<String, String> exec(String cmd, File workdir) throws InterruptedException, IOException {
+    private HashMap<String, String> exec(String cmd, File workdir) throws IOException {
         var timer = Stopwatch.createStarted();
         ProcessBuilder builder = new ProcessBuilder();
         builder.directory(workdir);
@@ -209,21 +222,31 @@ public class MergeService {
             errStr.append(line);
             outStr.append(System.lineSeparator());
         }
-        int exitCode = process.waitFor();
-        log.trace("Execute: `{}`, code: {}, time: {} workdir: {}", cmd, exitCode, timer.stop(), workdir.getPath());
 
         var result = new HashMap<String, String>();
-        result.put("stdout", outStr.toString().trim());
-        result.put("stderr", errStr.toString().trim());
-        result.put("code", String.valueOf(exitCode));
+        try {
+            int exitCode = process.waitFor();
+            result.put("stdout", outStr.toString().trim());
+            result.put("stderr", errStr.toString().trim());
+            result.put("code", String.valueOf(exitCode));
+
+        } catch (InterruptedException e){
+            log.error("Exception", e);
+            result.put("stdout", e.getMessage());
+            result.put("stderr", e.getMessage());
+            result.put("code", String.valueOf(1));
+        } finally {
+            process.destroy();
+        }
+        log.trace("Execute: `{}`, code: {}, time: {}, workdir: {}", cmd, result.get("code"), timer.stop(), workdir.getPath());
         return result;
     }
 
-    private static BufferedReader getOutput(Process p) {
+    private BufferedReader getOutput(Process p) {
         return new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8));
     }
 
-    private static BufferedReader getError(Process p) {
+    private BufferedReader getError(Process p) {
         return new BufferedReader(new InputStreamReader(p.getErrorStream(), StandardCharsets.UTF_8));
     }
 
