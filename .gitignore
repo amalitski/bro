@@ -2,6 +2,7 @@
 /.m2
 *.iml
 *.db
+.DS_Store
 /target
 /docker-compose.override.yml
 /application.yml
