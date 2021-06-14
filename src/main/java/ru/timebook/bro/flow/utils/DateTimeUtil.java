@@ -21,7 +21,7 @@ public class DateTimeUtil {
     }
 
     public static String formatFull(LocalDateTime date) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:ss");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
         return date.format(formatter);
     }
 }

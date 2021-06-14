@@ -22,7 +22,7 @@ public class Issue {
     private List<Committer> committers;
     @JsonIgnore
     public boolean isMergeLocalSuccess(){
-        return this.pullRequests.stream().filter(p -> p.getBranch() != null).allMatch(p -> p.getBranch().isMergeLocalSuccess());
+        return this.pullRequests.stream().filter(p -> p.getBranch() != null).allMatch(p -> p.getBranch().isMergeLocalSuccess() || p.getMerged());
     }
 
     @Singular

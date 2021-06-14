@@ -1,9 +1,9 @@
-.idea
-.m2
+/.idea
+/.m2
 *.iml
 *.db
+.DS_Store
 /target
 /docker-compose.override.yml
-/application.properties
 /application.yml
 /temp

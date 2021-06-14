@@ -4,6 +4,8 @@ import com.taskadapter.redmineapi.RedmineException;
 import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.RedmineManagerFactory;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.springframework.stereotype.Service;
 import ru.timebook.bro.flow.configurations.Configuration;
 import ru.timebook.bro.flow.utils.DateTimeUtil;
@@ -20,14 +22,22 @@ import java.util.stream.Collectors;
 @Service
 public class RedmineTaskTracker implements TaskTracker {
     private final Configuration.TaskTrackers.Redmine rmConfig;
-    private final RedmineManager manager;
+    private  RedmineManager api;
 
-    public RedmineTaskTracker(Configuration configuration) {
+   public RedmineTaskTracker(Configuration configuration) {
         this.rmConfig = configuration.getTaskTrackers().getRedmine();
+    }
 
-        this.manager = RedmineManagerFactory
-                .createWithApiKey(rmConfig.getHost(), rmConfig.getApiKey());
-        this.manager.setObjectsPerPage(100);
+    public RedmineManager getApi(){
+       if (this.api == null) {
+           var cxMgr = new PoolingHttpClientConnectionManager();
+           cxMgr.setMaxTotal(100);
+           cxMgr.setDefaultMaxPerRoute(20);
+           var client= HttpClients.custom().setConnectionManager(cxMgr).build();
+           this.api = RedmineManagerFactory.createWithApiKey(rmConfig.getHost(), rmConfig.getApiKey(), client);
+           this.api.setObjectsPerPage(100);
+       }
+       return this.api;
     }
 
     @Override
@@ -70,15 +80,13 @@ public class RedmineTaskTracker implements TaskTracker {
         var afterDate = LocalDate.now().plusDays(duration.toDays());
 
         var listIssues = new ArrayList<Issue>();
-        var issues = manager.getIssueManager().getIssues(params);
+        var issues = getApi().getIssueManager().getIssues(params);
 
         for (var i : issues) {
             if (DateTimeUtil.toLocalDate(i.getUpdatedOn()).isBefore(afterDate)) {
                 continue;
             }
-
-            // i.getAuthor() doesnt loaded email address
-            var aFull = manager.getUserManager().getUserById(i.getAuthor().getId());
+            var aFull = getApi().getUserManager().getUserById(i.getAuthor().getId());
             var avatar = (aFull.getMail() != null) ? GravatarUtil.getUri(aFull.getMail(), 50) : null;
             var a = Issue.Author.builder()
                     .id(String.valueOf(i.getAuthor().getId()))
