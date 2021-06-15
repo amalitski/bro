@@ -130,14 +130,14 @@
                                     <li class="breadcrumb-item"><a href="javascript: void(0);">Merge&Deploy</a></li>
                                     <li class="breadcrumb-item"><a href="javascript: void(0);">Last activity</a></li>
 
-                                    <li class="breadcrumb-item active">{{#data.lastBuild}}{{data.lastBuild.buildStartAt}}{{/data.lastBuild}}{{^data.lastBuild}}-{{/data.lastBuild}}</li>
+                                    <li class="breadcrumb-item active">{{#data.lastBuild.buildStartAt}}{{data.lastBuild.buildStartAt}}{{/data.lastBuild.buildStartAt}}{{^data.lastBuild.buildStartAt}}-{{/data.lastBuild.buildStartAt}}</li>
                                 </ol>
                             </div>
                         </div>
                     </div>
                 </div>
                 <!-- end page title -->
-                {{^data.lastBuild}}
+                {{^data.lastBuild.buildStartAt}}
                 <div class="row">
                     <div class="col-md-12">
                     <div class="card text-white bg-danger text-xs-center">
@@ -151,7 +151,7 @@
                     </div>
                     </div>
                 </div>
-                {{/data.lastBuild}}
+                {{/data.lastBuild.buildStartAt}}
                 {{#data.lastBuild.buildStartAt}}
                 <div class="row">
                     <div class="col-xl-8 col-lg-7">

@@ -119,7 +119,7 @@ public class MergeService {
     }
 
     private String getOutPretty(HashMap<String, String> resp){
-        return String.format("%s (code %s)\n%s", resp.get("cmd"), resp.get("code"), resp.get("stdout"));
+        return String.format("%s (code %s)%n%s", resp.get("cmd"), resp.get("code"), resp.get("stdout"));
     }
 
     private void mergeRepo(Merge merge) throws Exception {
@@ -134,7 +134,7 @@ public class MergeService {
         }
         var respFetch = exec("git fetch origin", dirInit);
         var out = merge.getInitStdout() == null ?
-                getOutPretty(respFetch): String.format("%s\n\n%s", merge.getInitStdout(), getOutPretty(respFetch));
+                getOutPretty(respFetch): String.format("%s%n%n%s", merge.getInitStdout(), getOutPretty(respFetch));
         merge.setInitStdout(out);
         if (!respFetch.get("code").equals("0")) {
             throw new Exception("Failed to fetch origin: " + dirInit.getPath());
