@@ -40,7 +40,7 @@ public class MergeService {
     public void clean(List<Merge> merges) {
         merges.parallelStream().forEach(merge -> {
             try {
-                if (merge.getDirMerge().exists()) {
+                if (merge.getDirMerge() != null && merge.getDirMerge().exists()) {
                     FileUtils.deleteDirectory(merge.getDirMerge());
                     log.trace("Delete dir: {}", merge.getDirMerge());
                 }
@@ -112,6 +112,7 @@ public class MergeService {
             var resp = exec("git clone " + merge.getSshUrlRepo() + " ./", dir);
             merge.setInitStdout(getOutPretty(resp));
             merge.setInitCode(resp.get("code"));
+            merge.setInitCode(resp.get("code"));
             if (!resp.get("code").equals("0")) {
                 throw new Exception(String.format("Clone %s repository with error. See logs for detail information. ", merge.getSshUrlRepo()));
             }
@@ -136,6 +137,7 @@ public class MergeService {
         var out = merge.getInitStdout() == null ?
                 getOutPretty(respFetch): String.format("%s%n%n%s", merge.getInitStdout(), getOutPretty(respFetch));
         merge.setInitStdout(out);
+        merge.setInitCode(respFetch.get("code"));
         if (!respFetch.get("code").equals("0")) {
             throw new Exception("Failed to fetch origin: " + dirInit.getPath());
         }

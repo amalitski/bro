@@ -73,7 +73,7 @@
 
             <!-- LOGO -->
             <div class="logo-box">
-                <a href="index.html" class="logo logo-light text-center">
+                <a href="{{path}}" class="logo logo-light text-center">
                             <span class="logo-sm">
                                  <span style="font-size: x-large; color: rgba(255,255,255,.6); margin-left: 15px">&lt;&nbsp;bro&nbsp;&gt;<</span>
                             </span>
@@ -95,7 +95,7 @@
                 <div class="collapse navbar-collapse" id="topnav-menu-content">
                     <ul class="navbar-nav">
                         <li class="nav-item">
-                            <a class="nav-link arrow-none" href="#" id="topnav-dashboard" role="button">
+                            <a class="nav-link arrow-none" href="{{path}}/flow" id="topnav-dashboard" role="button">
                                 <i class="fe-code mr-1"></i> Merge&Deploy
                             </a>
                         </li>
@@ -127,7 +127,7 @@
                         <div class="page-title-box">
                             <div class="page-title-right">
                                 <ol class="breadcrumb m-0">
-                                    <li class="breadcrumb-item"><a href="javascript: void(0);">Merge&Deploy</a></li>
+                                    <li class="breadcrumb-item"><a href="{{path}}/flow">Merge&Deploy</a></li>
                                     <li class="breadcrumb-item"><a href="javascript: void(0);">Last activity</a></li>
 
                                     <li class="breadcrumb-item active">{{#data.lastBuild.buildStartAt}}{{data.lastBuild.buildStartAt}}{{/data.lastBuild.buildStartAt}}{{^data.lastBuild.buildStartAt}}-{{/data.lastBuild.buildStartAt}}</li>
