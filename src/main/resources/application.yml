@@ -8,11 +8,13 @@ bro:
       tempDir: temp
       pushCmd: git push -u origin :${bro.flow.stage.branchName}; git checkout -b ${bro.flow.stage.branchName} && git push -u origin ${bro.flow.stage.branchName}
       cronReceive: "0 */10 * * * ?"
+      basePath: /bro
     task-trackers:
       redmine:
         host: https://redmine.domain.com
         apiKey: ACCESS_TOKEN
         afterUpdateTime: P-30D # period for the tasks where changes may be applied
+        timeout: 30000
         trackers:
           - id: 001
         statuses:
@@ -42,6 +44,7 @@ bro:
         proxy:
         enableRequestLogging: false
         enabled: true
+        timeout: 30000
 
 logging:
   pattern:
@@ -80,3 +83,5 @@ server:
       max: 5
       min-spare: 1
     connection-timeout: 30
+  servlet:
+    context-path: ${bro.flow.stage.basePath}

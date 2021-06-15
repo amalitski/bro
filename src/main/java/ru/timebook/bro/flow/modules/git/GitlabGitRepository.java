@@ -62,6 +62,7 @@ public class GitlabGitRepository implements GitRepository {
             } else {
                 gitLabApi = new GitLabApi(config.getHost(), config.getToken());
             }
+            gitLabApi.setRequestTimeout(config.getTimeout(), config.getTimeout());
             if (config.isEnableRequestLogging()) {
                 gitLabApi.enableRequestResponseLogging();
             }
@@ -93,7 +94,8 @@ public class GitlabGitRepository implements GitRepository {
 
     public String getCommitterAvatarUri(String email)  {
         RestTemplate restTemplate = new RestTemplate();
-        var result = restTemplate.getForObject(String.format("%s/api/v4/avatar?email=%s&size=50", config.getHost(), email), HashMap.class);
+        var result = restTemplate
+                .getForObject(String.format("%s/api/v4/avatar?email=%s&size=50", config.getHost(), email), HashMap.class);
         assert result != null;
         if (result.containsKey("avatar_url")) {
             return result.get("avatar_url").toString();
@@ -112,7 +114,10 @@ public class GitlabGitRepository implements GitRepository {
                 Merge merge;
                 if (map.containsKey(pr.getProjectName())) {
                     merge = map.get(pr.getProjectName());
-                    merge.getBranches().add(Merge.Branch.builder().branchName(pr.getSourceBranchName()).targetBranchName(pr.getTargetBranchName()).build());
+                    merge.getBranches().add(Merge.Branch.builder()
+                            .branchName(pr.getSourceBranchName())
+                            .targetBranchName(pr.getTargetBranchName())
+                            .build());
                     map.remove(pr.getProjectName());
                 } else {
                     var branches = new LinkedHashSet<String>();
@@ -120,7 +125,10 @@ public class GitlabGitRepository implements GitRepository {
                     rep.ifPresent(repository -> branches.addAll(repository.getPreMerge()));
                     branches.add(pr.getSourceBranchName());
                     merge = Merge.builder()
-                            .branches(branches.stream().map(v -> Merge.Branch.builder().branchName(v).targetBranchName(pr.getTargetBranchName()).merged(pr.getMerged()).build()).collect(Collectors.toList()))
+                            .branches(branches.stream().map(v -> Merge.Branch.builder()
+                                    .branchName(v)
+                                    .targetBranchName(pr.getTargetBranchName())
+                                    .merged(pr.getMerged()).build()).collect(Collectors.toList()))
                             .projectName(pr.getProjectName())
                             .httpUrlRepo(pr.getHttpUrlRepo())
                             .sshUrlRepo(pr.getSshUrlRepo())
