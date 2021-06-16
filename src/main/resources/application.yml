@@ -9,6 +9,9 @@ bro:
       pushCmd: git push -u origin :${bro.flow.stage.branchName}; git checkout -b ${bro.flow.stage.branchName} && git push -u origin ${bro.flow.stage.branchName}
       cronReceive: "0 */10 * * * ?"
       basePath: /bro
+      git:
+        userName: Bender Rodriguez
+        userEmail: bender@company.com
     task-trackers:
       redmine:
         host: https://redmine.domain.com
