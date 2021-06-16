@@ -112,10 +112,15 @@ public class MergeService {
             var resp = exec("git clone " + merge.getSshUrlRepo() + " ./", dir);
             merge.setInitStdout(getOutPretty(resp));
             merge.setInitCode(resp.get("code"));
-            merge.setInitCode(resp.get("code"));
             if (!resp.get("code").equals("0")) {
                 throw new Exception(String.format("Clone %s repository with error. See logs for detail information. ", merge.getSshUrlRepo()));
             }
+            var cmd = String.format(
+                    "git config user.name %s && git config user.email %s",
+                    configuration.getStage().getGit().getUserName(),
+                    configuration.getStage().getGit().getUserEmail()
+            );
+            exec(cmd, dir);
         }
     }
 
@@ -133,6 +138,8 @@ public class MergeService {
         } else if (!dirRepo.mkdirs()) {
             throw new Exception("Failed to create repo directory: " + dirRepo.getPath());
         }
+        merge.setDirRepo(dirRepo);
+        merge.setDirMerge(dirMerge);
         var respFetch = exec("git fetch origin", dirInit);
         var out = merge.getInitStdout() == null ?
                 getOutPretty(respFetch): String.format("%s%n%n%s", merge.getInitStdout(), getOutPretty(respFetch));
@@ -141,8 +148,7 @@ public class MergeService {
         if (!respFetch.get("code").equals("0")) {
             throw new Exception("Failed to fetch origin: " + dirInit.getPath());
         }
-        merge.setDirRepo(dirRepo);
-        merge.setDirMerge(dirMerge);
+
         FileUtils.copyDirectory(dirInit, dirRepo);
         mergeRecursive(merge, dirRepo);
 

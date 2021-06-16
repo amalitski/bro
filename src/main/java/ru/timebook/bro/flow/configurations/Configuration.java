@@ -26,6 +26,13 @@ public class Configuration {
         private String pushCmd;
         private String cronReceive;
         private String basePath;
+        private Git git;
+
+        @Data
+        public static class Git {
+            private String userName;
+            private String userEmail;
+        }
     }
 
     @Data

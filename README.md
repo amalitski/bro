@@ -9,9 +9,8 @@ This project provides an extendable Java application for creating development an
 
 # Local Development/Testing
 
-## Build & Run
-
-`docker-compose up -d --build`
+- Copy SSH private key (for git repo) to `.docker/git_key.private` 
+- Run docker-compose `docker-compose up -d`
 
 
 # Contributing

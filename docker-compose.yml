@@ -5,7 +5,14 @@ services:
       context: ./
       dockerfile: .docker/Dockerfile
     volumes:
+      - ./.docker/git_key.private:/www/git_key.private:ro
+      - ./application.yml:/www/application.yml:ro
       - maven-repo:/usr/share/maven/ref
+      - temp-repo:/www/temp
+    environment:
+      - JAVA_OPTS=-Dhttps.protocols=TLSv1.2 -Xms64m -Xmx256m -Xss256k
+    working_dir: /www
     restart: always
 volumes:
   maven-repo:
+  temp-repo:
