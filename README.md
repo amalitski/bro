@@ -1,6 +1,6 @@
-[![test](https://github.com/amalitski/bro/actions/workflows/test.yml/badge.svg)](https://github.com/amalitski/bro/actions/workflows/unit.yml)
+[![test](https://github.com/amalitski/bro/actions/workflows/test.yml/badge.svg)](https://github.com/amalitski/bro/actions/workflows/test.yml)
 [![SAST](https://github.com/amalitski/bro/actions/workflows/sast.yml/badge.svg)](https://github.com/amalitski/bro/actions/workflows/sast.yml)
-[![Build](https://github.com/amalitski/bro/actions/workflows/main.yml/badge.svg)](https://github.com/amalitski/bro/actions/workflows/main.yml)
+[![build](https://github.com/amalitski/bro/actions/workflows/build.yml/badge.svg)](https://github.com/amalitski/bro/actions/workflows/build.yml)
 
 ![Build Status](./docs/head-logo.png)
 
