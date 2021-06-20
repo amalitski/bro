@@ -101,7 +101,6 @@ public class Config {
             private String host;
             private String token;
             private String proxy;
-            private String tempDir;
             private boolean enableRequestLogging;
             private Stage stage;
             private List<Repository> repositories;
