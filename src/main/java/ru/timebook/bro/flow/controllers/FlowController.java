@@ -5,7 +5,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.ModelAndView;
-import ru.timebook.bro.flow.configurations.Configuration;
+import ru.timebook.bro.flow.configs.Config;
 import ru.timebook.bro.flow.modules.build.ExecutionService;
 import ru.timebook.bro.flow.modules.build.FlowService;
 
@@ -19,9 +19,9 @@ public class FlowController {
     private final FlowService flowService;
     private final Semaphore lock = new Semaphore(1);
     private final ExecutionService executionService;
-    private final Configuration config;
+    private final Config config;
 
-    public FlowController(FlowService flowService, ExecutionService executionService, Configuration config) {
+    public FlowController(FlowService flowService, ExecutionService executionService, Config config) {
         this.flowService = flowService;
         this.executionService = executionService;
         this.config = config;

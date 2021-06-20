@@ -8,7 +8,7 @@ import org.apache.http.config.SocketConfig;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.springframework.stereotype.Service;
-import ru.timebook.bro.flow.configurations.Configuration;
+import ru.timebook.bro.flow.configs.Config;
 import ru.timebook.bro.flow.utils.DateTimeUtil;
 import ru.timebook.bro.flow.utils.GravatarUtil;
 
@@ -22,11 +22,11 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class RedmineTaskTracker implements TaskTracker {
-    private final Configuration.TaskTrackers.Redmine config;
+    private final Config.TaskTrackers.Redmine config;
     private  RedmineManager api;
 
-   public RedmineTaskTracker(Configuration configuration) {
-        this.config = configuration.getTaskTrackers().getRedmine();
+   public RedmineTaskTracker(Config config) {
+        this.config = config.getTaskTrackers().getRedmine();
     }
 
     public RedmineManager getApi(){
@@ -120,7 +120,7 @@ public class RedmineTaskTracker implements TaskTracker {
 
     private List<String> getCustomFieldsIds() {
         return config.getCustomFields().stream()
-                .map(Configuration.TaskTrackers.Redmine.CustomField::getId).collect(Collectors.toList());
+                .map(Config.TaskTrackers.Redmine.CustomField::getId).collect(Collectors.toList());
     }
 }
 

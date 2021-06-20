@@ -29,6 +29,9 @@ public class BuildHasProject {
     @Column(nullable = true)
     private String mergeCheckSum;
 
+    @Column
+    private String lastCommitSha;
+
     @Lob
     @Column(nullable = true)
     private String mergesJson;
