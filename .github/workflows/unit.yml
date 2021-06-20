@@ -1,4 +1,4 @@
-name: Build Artifact
+name: Unit test
 
 # Controls when the action will run. 
 on:
@@ -12,8 +12,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  compile:
-    name: Build package
+  SAST:
+    name: Run spotbugs checker
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
@@ -25,11 +25,5 @@ jobs:
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
-      - name: Build with Maven
-        run: mvn -B clean package
-      - uses: actions/upload-artifact@v2
-        with:
-          name: Artifact
-          path: target/*.jar
-          retention-days: 90
-
+      - name: Unit test
+        run: mvn -B clean test
