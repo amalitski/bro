@@ -4,7 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import ru.timebook.bro.flow.configurations.Configuration;
+import ru.timebook.bro.flow.configs.Config;
 import ru.timebook.bro.flow.modules.git.GitRepository;
 import ru.timebook.bro.flow.modules.taskTracker.Issue;
 import ru.timebook.bro.flow.modules.taskTracker.TaskTracker;
@@ -21,7 +21,7 @@ public class ExecutionService {
     private final List<TaskTracker> taskTrackers;
     private final List<GitRepository> gitRepositories;
     private final MergeService mergeService;
-    private final Configuration configuration;
+    private final Config config;
     private final BuildRepository buildRepository;
     private final ProjectRepository projectRepository;
     private final BuildHasProjectRepository buildHasProjectRepository;
@@ -34,14 +34,14 @@ public class ExecutionService {
     }
 
     public ExecutionService(MergeService mergeService,
-                            Configuration configuration,
+                            Config config,
                             BuildRepository buildRepository,
                             ProjectRepository projectRepository,
                             BuildHasProjectRepository buildHasProjectRepository,
                             Map<String, TaskTracker> taskTrackers,
                             Map<String, GitRepository> gitRepositories) {
         this.mergeService = mergeService;
-        this.configuration = configuration;
+        this.config = config;
         this.buildRepository = buildRepository;
         this.projectRepository = projectRepository;
         this.buildHasProjectRepository = buildHasProjectRepository;
@@ -58,25 +58,25 @@ public class ExecutionService {
         var merges = gitRepositories.stream().map(v -> v.getMerge(issues)).flatMap(Collection::stream).collect(Collectors.toList());
         mergeService.merge(merges);
 //        mergeService.push(merges);
-        mergeService.clean(merges);
 
         issues.forEach(i -> i.getPullRequests().forEach(pr -> MergeService.getBranchByPr(pr, merges).ifPresent(pr::setBranch)));
         issues.forEach(MergeService::updateCommitters);
         createBuild(issues, merges);
-
+        mergeService.clean();
         log.debug("Complete");
         return Response.builder().issues(issues).merges(merges).build();
     }
 
-    private void createBuild(List<Issue> issues, List<Merge> merges){
+    private void createBuild(List<Issue> issues, List<Merge> merges) {
         var b = buildRepository.save(Build.builder().issuesJson(JsonUtil.serialize(issues)).startAt(LocalDateTime.now()).build());
         var buildHasProjects = merges.stream().map(m -> {
-            var p = projectRepository.findByName(m.getProjectName()).orElse(Project.builder().name(m.getProjectName()).buildCheckSum("").build());
+            var p = projectRepository.findByName(m.getProjectName())
+                    .orElse(Project.builder().name(m.getProjectName()).buildCheckSum("").build());
             if (p.getId() != null && m.getCheckSum() != null) {
                 p.setBuildCheckSum(m.getCheckSum());
             }
             p = projectRepository.save(p);
-            return BuildHasProject.builder().project(p).build(b).mergesJson(JsonUtil.serialize(m)).mergeCheckSum(m.getCheckSum()).build();
+            return BuildHasProject.builder().project(p).build(b).mergesJson(JsonUtil.serialize(m)).mergeCheckSum(m.getCheckSum()).lastCommitSha(m.getLastCommitSha()).build();
         }).filter(Objects::nonNull).collect(Collectors.toList());
         buildHasProjectRepository.saveAll(buildHasProjects);
         log.trace("Build saved. Id: {}, buildHasProjects.size(): {}", b.getId(), buildHasProjects.size());
@@ -91,7 +91,7 @@ public class ExecutionService {
         });
     }
 
-    public String getOut(List<Issue> issues, List<Merge> merges){
+    public String getOut(List<Issue> issues, List<Merge> merges) {
         var out = new StringBuilder();
         out.append(String.format("Issues: %s ", issues.size())).append("\n");
         for (var i : issues) {
@@ -104,12 +104,12 @@ public class ExecutionService {
         }
         out.append("---\t Logs").append("\n");
         for (var m : merges) {
-            out.append(String.format("  -\t %s:%s",  m.getProjectName(), configuration.getStage().getBranchName())).append("\n");
+            out.append(String.format("  -\t %s:%s", m.getProjectName(), config.getStage().getBranchName())).append("\n");
             out.append(String.format("   \t %s", m.getLog())).append("\n");
         }
         out.append("---\t initStdOut").append("\n");
         for (var m : merges) {
-            out.append(String.format("  -\t %s:%s",  m.getProjectName(), configuration.getStage().getBranchName())).append("\n");
+            out.append(String.format("  -\t %s:%s", m.getProjectName(), config.getStage().getBranchName())).append("\n");
             out.append(String.format("   \t %s", m.getInitStdout())).append("\n");
         }
         return out.toString();

@@ -5,13 +5,16 @@ bro:
       name: default.domain.com
       uri: https://${bro.flow.stage.name}
       branchName: stages/${bro.flow.stage.name}
-      tempDir: temp
       pushCmd: git push -u origin :${bro.flow.stage.branchName}; git checkout -b ${bro.flow.stage.branchName} && git push -u origin ${bro.flow.stage.branchName}
       cronReceive: "0 */10 * * * ?"
       basePath: /bro
       git:
         userName: Bender Rodriguez
         userEmail: bender@company.com
+      temp:
+        initDir: init
+        tempDir: temp/projects
+        cleanAfter: P-14D
     task-trackers:
       redmine:
         host: https://redmine.domain.com

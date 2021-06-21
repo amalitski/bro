@@ -281,7 +281,7 @@
                             <div class="card-body">
                                 <h5 class="card-title font-16 mb-3">Projects ({{data.merges.size}})</h5>
                                 {{#data.merges}}
-                                <div class="card mb-1 shadow-none border {{#initCode}}border-warning{{/initCode}}">
+                                <div class="card mb-1 shadow-none border{{^initSuccess}} border-warning{{/initSuccess}}">
                                     <div class="p-2">
                                         <div class="row align-items-center">
                                             <div class="col-auto">
@@ -291,11 +291,11 @@
                                             </div>
                                             <div class="col pl-0">
                                                 <a href="{{httpUrlRepo}}" class="text-muted font-weight-bold">{{projectName}}</a>
-                                                <a class="text-dark float-right" data-toggle="collapse" href="#project-detail-1" aria-expanded="true">
+                                                <a class="text-dark float-right" data-toggle="collapse" href="#project-detail-{{projectId}}" aria-expanded="true">
                                                     <i class="mdi mdi-chevron-down font-18"></i>
                                                 </a>
                                             </div>
-                                            <div class="mt-1 collapse col-12" id="project-detail-1">
+                                            <div class="mt-1 collapse col-12" id="project-detail-{{projectId}}">
                                                 <pre>{{#initStdout}}{{initStdout}}{{/initStdout}}</pre>
                                             </div>
                                         </div>

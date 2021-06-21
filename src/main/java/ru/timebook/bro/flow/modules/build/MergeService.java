@@ -4,7 +4,8 @@ import com.google.common.base.Stopwatch;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.springframework.stereotype.Service;
-import ru.timebook.bro.flow.configurations.Configuration;
+import org.springframework.util.DigestUtils;
+import ru.timebook.bro.flow.configs.Config;
 import ru.timebook.bro.flow.modules.taskTracker.Issue;
 import ru.timebook.bro.flow.modules.git.Merge;
 import ru.timebook.bro.flow.utils.DateTimeUtil;
@@ -13,17 +14,20 @@ import ru.timebook.bro.flow.utils.StringUtil;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 public class MergeService {
-    private final Configuration configuration;
+    private final Config config;
     private final ProjectRepository projectRepository;
 
-    public MergeService(Configuration configuration, ProjectRepository projectRepository) {
-        this.configuration = configuration;
+    public MergeService(Config config, ProjectRepository projectRepository) {
+        this.config = config;
         this.projectRepository = projectRepository;
     }
 
@@ -37,40 +41,59 @@ public class MergeService {
             }
         });
     }
-    public void clean(List<Merge> merges) {
-        merges.parallelStream().forEach(merge -> {
+
+    public void clean() {
+        var dir = System.getProperty("user.dir") + File.separator + config.getStage().getTemp().getTempDir();
+        var dirsRemove = new ArrayList<File>();
+        getDirectories(dir).parallelStream().forEach(f -> {
+            var duration = Duration.parse(config.getStage().getTemp().getCleanAfter());
+            var olden = Instant.now().plusSeconds(duration.getSeconds());
+            if (FileUtils.isFileOlder(f, olden)) {
+                dirsRemove.add(f);
+            } else {
+                dirsRemove.addAll(getDirectories(f.getAbsolutePath()).stream()
+                        .filter(pProject -> !pProject.getName().equals(config.getStage().getTemp().getInitDir()))
+                        .collect(Collectors.toList()));
+            }
+        });
+        dirsRemove.parallelStream().forEach(f -> {
             try {
-                if (merge.getDirMerge() != null && merge.getDirMerge().exists()) {
-                    FileUtils.deleteDirectory(merge.getDirMerge());
-                    log.trace("Delete dir: {}", merge.getDirMerge());
-                }
-            } catch (Exception e) {
-                log.error("Merge exception", e);
+                FileUtils.deleteDirectory(f);
+                log.trace("Remove directory: {}", f.getAbsolutePath());
+            } catch (IOException e) {
+                log.error("Exception", e);
             }
         });
     }
 
     public void push(List<Merge> merges) throws Exception {
-        for (var merge : merges) {
-            pushExec(merge);
-        }
+        merges.forEach(m -> {
+            if (!m.getInitSuccess()) {
+                log.error("Skip push command, because init repo with error. See init logs: {}", m.getInitStdout());
+                return;
+            }
+            try {
+                pushExec(m);
+            } catch (Exception e) {
+                log.error("Push command return exception", e);
+            }
+        });
     }
 
     private void pushExec(Merge merge) throws Exception {
-        if (configuration.getStage().getBranchName().isEmpty() || configuration.getStage().getPushCmd().isEmpty()) {
+        if (config.getStage().getBranchName().isEmpty() || config.getStage().getPushCmd().isEmpty()) {
             throw new Exception("Invalid configuration: bro.flow.stage.branchName or bro.flow.stage.pushCmd empty!");
         }
         var project = projectRepository.findByName(merge.getProjectName());
         if (project.isPresent() && project.get().getBuildCheckSum().equals(merge.getCheckSum())) {
             return;
         }
-
-        var cmd = configuration.getStage().getPushCmd();
+        var cmd = config.getStage().getPushCmd();
         var resp = exec(cmd, merge.getDirRepo());
         merge.getPush().setLog(resp.get("stdout"));
         merge.getPush().setPushed(resp.get("code").equals("0"));
         if (merge.getPush().isPushed()) {
-            log.debug("Pushed project {}:{}", merge.getProjectName(), configuration.getStage().getBranchName());
+            log.debug("Pushed project {}:{}", merge.getProjectName(), config.getStage().getBranchName());
         }
     }
 
@@ -102,7 +125,7 @@ public class MergeService {
     }
 
     private void initRepo(Merge merge) throws Exception {
-        var dirname = getInitDirPath(merge.getProjectName());
+        var dirname = getInitDirPath(merge);
         var dir = new File(dirname);
         if (!dir.exists() && !dir.mkdirs()) {
             throw new Exception("Failed to create init directory: " + dirname);
@@ -117,14 +140,14 @@ public class MergeService {
             }
             var cmd = String.format(
                     "git config user.name %s && git config user.email %s",
-                    configuration.getStage().getGit().getUserName(),
-                    configuration.getStage().getGit().getUserEmail()
+                    config.getStage().getGit().getUserName(),
+                    config.getStage().getGit().getUserEmail()
             );
             exec(cmd, dir);
         }
     }
 
-    private String getOutPretty(HashMap<String, String> resp){
+    private String getOutPretty(HashMap<String, String> resp) {
         return String.format("%s (code %s)%n%s", resp.get("cmd"), resp.get("code"), resp.get("stdout"));
     }
 
@@ -132,7 +155,7 @@ public class MergeService {
         var dirname = getMergeDirPath(merge);
         var dirMerge = new File(dirname);
         var dirRepo = new File(dirname + File.separator + "repo");
-        var dirInit = new File(getInitDirPath(merge.getProjectName()));
+        var dirInit = new File(getInitDirPath(merge));
         if (!dirMerge.exists() && !dirMerge.mkdirs()) {
             throw new Exception("Failed to create merge directory: " + dirname);
         } else if (!dirRepo.mkdirs()) {
@@ -142,7 +165,7 @@ public class MergeService {
         merge.setDirMerge(dirMerge);
         var respFetch = exec("git fetch origin", dirInit);
         var out = merge.getInitStdout() == null ?
-                getOutPretty(respFetch): String.format("%s%n%n%s", merge.getInitStdout(), getOutPretty(respFetch));
+                getOutPretty(respFetch) : String.format("%s%n%n%s", merge.getInitStdout(), getOutPretty(respFetch));
         merge.setInitStdout(out);
         merge.setInitCode(respFetch.get("code"));
         if (!respFetch.get("code").equals("0")) {
@@ -154,12 +177,24 @@ public class MergeService {
 
         var log = exec("git log -25 --pretty=format:'%cd \\t %an : %s'", dirRepo);
         merge.setLog(log.get("stdout"));
-        var checkSum = exec("git log -1000 --pretty=format:\"%s\" | md5sum | awk '{print $1}'", dirRepo);
-        merge.setCheckSum(checkSum.get("stdout"));
+        var restCheckSum = exec("git log -1000 --pretty=format:\"%s\"", dirRepo);
+        if (!restCheckSum.get("code").equals("0")) {
+            var msg = String.format("Calculate checksum with error. Cmd '%s' dir %s", restCheckSum.get("cmd"), dirRepo);
+            throw new Exception(msg);
+        }
+        var checkSum = DigestUtils.md5DigestAsHex(restCheckSum.get("stdout").getBytes(StandardCharsets.UTF_8));
+        merge.setCheckSum(checkSum);
+
+        var lastCommit = exec("git log -1 --pretty=%H", dirRepo);
+        merge.setLastCommitSha(lastCommit.get("stdout").trim());
     }
 
-    private boolean mergeRecursive(Merge merge, File dirRepo) throws InterruptedException, IOException {
-        var branchFirst = merge.getBranches().stream().findFirst().get();
+    private boolean mergeRecursive(Merge merge, File dirRepo) throws IOException {
+        var branchFirstOpt = merge.getBranches().stream().findFirst();
+        if (branchFirstOpt.isEmpty()){
+            return true;
+        }
+        var branchFirst = branchFirstOpt.get();
         var resetResp = exec("git reset --hard origin/" + branchFirst.getBranchName(), dirRepo);
         if (!resetResp.get("code").equals("0")) {
             merge.setInitStdout(resetResp.get("stdout"));
@@ -183,7 +218,7 @@ public class MergeService {
                 continue;
             }
             branch.setCommits(getCommits(branch, dirRepo));
-            var msg = "Merge branch '" + branch.getBranchName() + "' into stage '" + configuration.getStage().getBranchName() + "'";
+            var msg = "Merge branch '" + branch.getBranchName() + "' into stage '" + config.getStage().getBranchName() + "'";
             var resp = exec("git merge -m \"" + msg + "\" origin/" + branch.getBranchName(), dirRepo);
             var success = resp.get("code").equals("0");
             branch.setStdout(resp.get("stdout"));
@@ -198,7 +233,7 @@ public class MergeService {
         return true;
     }
 
-    private List<Merge.Branch.Commit> getCommits(Merge.Branch branch, File dirRepo) throws IOException, InterruptedException {
+    private List<Merge.Branch.Commit> getCommits(Merge.Branch branch, File dirRepo) throws IOException {
         var commits = new ArrayList<Merge.Branch.Commit>();
         var cmdLog = MessageFormat.format("git log --pretty=format:\"%H|||%ce|||%ci|||%f\" origin/{1}..origin/{0}", branch.getBranchName(), branch.getTargetBranchName());
         var respLog = exec(cmdLog, dirRepo);
@@ -250,7 +285,7 @@ public class MergeService {
             result.put("stderr", errStr.toString().trim());
             result.put("code", String.valueOf(exitCode));
 
-        } catch (InterruptedException e){
+        } catch (InterruptedException e) {
             log.error("Exception", e);
             result.put("stdout", e.getMessage());
             result.put("stderr", e.getMessage());
@@ -270,18 +305,27 @@ public class MergeService {
         return new BufferedReader(new InputStreamReader(p.getErrorStream(), StandardCharsets.UTF_8));
     }
 
-    private String getInitDirPath(String projectName) {
-        var dirname = projectName.replaceAll("[^A-Za-z0-9\\-_.]", ".");
+    private String getProjectDirPath(Merge merge) {
+        var dirname = merge.getProjectSafeName();
         return System.getProperty("user.dir") + File.separator +
-                configuration.getStage().getTempDir() + File.separator + dirname + "/" +
-                "init";
+                config.getStage().getTemp().getTempDir() + File.separator + dirname;
+    }
+
+    private String getInitDirPath(Merge merge) {
+        return getProjectDirPath(merge) + File.separator + config.getStage().getTemp().getInitDir();
     }
 
     private String getMergeDirPath(Merge merge) {
-        var projectName = merge.getProjectName();
-        var dirname = projectName.replaceAll("[^A-Za-z0-9\\-_.]", ".");
-        return System.getProperty("user.dir") + File.separator +
-                configuration.getStage().getTempDir() + File.separator + dirname + "/" +
+        return getProjectDirPath(merge) + File.separator +
                 DateTimeUtil.getDate("yyyy.MM.dd_HH:mm.ss") + "R" + Integer.toHexString(Integer.parseInt(StringUtil.random(1000, 9999)));
+    }
+
+    private List<File> getDirectories(String path) {
+        File file = new File(path);
+        File[] directories = file.listFiles(File::isDirectory);
+        if (directories == null) {
+            return List.of();
+        }
+        return List.of(directories);
     }
 }

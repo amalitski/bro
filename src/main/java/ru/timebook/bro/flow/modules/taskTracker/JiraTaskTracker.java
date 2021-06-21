@@ -7,7 +7,7 @@ import com.atlassian.jira.rest.client.api.domain.input.IssueInputBuilder;
 import com.atlassian.jira.rest.client.internal.async.AsynchronousJiraRestClientFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import ru.timebook.bro.flow.configurations.Configuration;
+import ru.timebook.bro.flow.configs.Config;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -19,11 +19,11 @@ import java.util.stream.StreamSupport;
 @Slf4j
 @Service
 public class JiraTaskTracker implements TaskTracker {
-    private final Configuration.TaskTrackers.Jira config;
+    private final Config.TaskTrackers.Jira config;
     private JiraRestClient client;
 
-    public JiraTaskTracker(Configuration configuration) {
-        this.config = configuration.getTaskTrackers().getJira();
+    public JiraTaskTracker(Config config) {
+        this.config = config.getTaskTrackers().getJira();
     }
 
     @Override

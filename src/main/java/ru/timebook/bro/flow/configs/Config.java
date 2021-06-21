@@ -1,4 +1,4 @@
-package ru.timebook.bro.flow.configurations;
+package ru.timebook.bro.flow.configs;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -12,7 +12,7 @@ import java.util.List;
 @Component
 @EnableScheduling
 @ConfigurationProperties("bro.flow")
-public class Configuration {
+public class Config {
     private Stage stage;
     private TaskTrackers taskTrackers;
     private Repositories repositories;
@@ -22,11 +22,18 @@ public class Configuration {
         private String name;
         private String uri;
         private String branchName;
-        private String tempDir;
         private String pushCmd;
         private String cronReceive;
         private String basePath;
         private Git git;
+        private Temp temp;
+
+        @Data
+        public static class Temp {
+            private String tempDir;
+            private String initDir;
+            private String cleanAfter;
+        }
 
         @Data
         public static class Git {
@@ -76,6 +83,7 @@ public class Configuration {
             private String apiToken;
             private boolean enabled;
             private Issues issues;
+
             @Data
             public static class Issues {
                 private String mergeJQL;
@@ -93,7 +101,6 @@ public class Configuration {
             private String host;
             private String token;
             private String proxy;
-            private String tempDir;
             private boolean enableRequestLogging;
             private Stage stage;
             private List<Repository> repositories;

@@ -1,5 +1,6 @@
 package ru.timebook.bro.flow.modules.git;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 
 import java.io.File;
@@ -12,18 +13,23 @@ import java.util.List;
 public class Merge {
     private String httpUrlRepo;
     private String sshUrlRepo;
+    private String projectId;
     private String projectName;
+    private String projectSafeName;
+    private String projectShortName;
     private List<Branch> branches;
     private File dirMerge;
     private File dirRepo;
     private String checkSum;
+    private String lastCommitSha;
     private String log;
     private Push push;
     private String initStdout;
     private String initCode;
 
-    private String getProjectShortName(){
-        return this.projectName.substring(0,1).toUpperCase();
+    @JsonIgnore
+    public boolean getInitSuccess(){
+        return this.initCode.equals("0");
     }
 
     @Data

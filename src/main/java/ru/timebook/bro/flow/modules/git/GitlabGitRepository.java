@@ -5,10 +5,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.gitlab4j.api.GitLabApi;
 import org.gitlab4j.api.ProxyClientConfig;
 import org.springframework.stereotype.Service;
+import org.springframework.util.DigestUtils;
 import org.springframework.web.client.RestTemplate;
-import ru.timebook.bro.flow.configurations.Configuration;
+import ru.timebook.bro.flow.configs.Config;
 import ru.timebook.bro.flow.modules.taskTracker.Issue;
+import ru.timebook.bro.flow.utils.BufferUtil;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -17,11 +20,11 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class GitlabGitRepository implements GitRepository {
-    private final Configuration.Repositories.Gitlab config;
+    private final Config.Repositories.Gitlab config;
     private GitLabApi gitLabApi;
 
-    public GitlabGitRepository(Configuration configuration) {
-        this.config = configuration.getRepositories().getGitlab();
+    public GitlabGitRepository(Config config) {
+        this.config = config.getRepositories().getGitlab();
     }
 
     @Override
@@ -92,15 +95,18 @@ public class GitlabGitRepository implements GitRepository {
         return config.isEnabled();
     }
 
-    public String getCommitterAvatarUri(String email)  {
-        RestTemplate restTemplate = new RestTemplate();
-        var result = restTemplate
-                .getForObject(String.format("%s/api/v4/avatar?email=%s&size=50", config.getHost(), email), HashMap.class);
-        assert result != null;
-        if (result.containsKey("avatar_url")) {
-            return result.get("avatar_url").toString();
-        }
-        return "";
+    public String getCommitterAvatarUri(String email) {
+        return BufferUtil.key(email, () -> {
+            log.trace("Request avatar_uri: {}", email);
+            RestTemplate restTemplate = new RestTemplate();
+            var result = restTemplate
+                    .getForObject(String.format("%s/api/v4/avatar?email=%s&size=50", config.getHost(), email), HashMap.class);
+            assert result != null;
+            if (result.containsKey("avatar_url")) {
+                return result.get("avatar_url").toString();
+            }
+            return "";
+        });
     }
 
     public List<Merge> getMerge(List<Issue> issues) {
@@ -129,7 +135,10 @@ public class GitlabGitRepository implements GitRepository {
                                     .branchName(v)
                                     .targetBranchName(pr.getTargetBranchName())
                                     .merged(pr.getMerged()).build()).collect(Collectors.toList()))
+                            .projectId(DigestUtils.md5DigestAsHex(pr.getProjectName().getBytes(StandardCharsets.UTF_8)))
                             .projectName(pr.getProjectName())
+                            .projectSafeName(pr.getProjectName().replaceAll("[^A-Za-z0-9\\-_.]", "."))
+                            .projectShortName(pr.getProjectName().substring(0,1).toUpperCase())
                             .httpUrlRepo(pr.getHttpUrlRepo())
                             .sshUrlRepo(pr.getSshUrlRepo())
                             .push(Merge.Push.builder().build())
@@ -142,7 +151,7 @@ public class GitlabGitRepository implements GitRepository {
         return new ArrayList<>(map.values());
     }
 
-    private Optional<Configuration.Repositories.Gitlab.Repository> getPreMergeBranch(String projectName) {
+    private Optional<Config.Repositories.Gitlab.Repository> getPreMergeBranch(String projectName) {
         if (config.getRepositories() == null) {
             return Optional.empty();
         }
