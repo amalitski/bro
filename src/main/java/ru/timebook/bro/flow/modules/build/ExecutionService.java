@@ -57,7 +57,7 @@ public class ExecutionService {
 
         var merges = gitRepositories.stream().map(v -> v.getMerge(issues)).flatMap(Collection::stream).collect(Collectors.toList());
         mergeService.merge(merges);
-//        mergeService.push(merges);
+        mergeService.push(merges);
 
         issues.forEach(i -> i.getPullRequests().forEach(pr -> MergeService.getBranchByPr(pr, merges).ifPresent(pr::setBranch)));
         issues.forEach(MergeService::updateCommitters);
@@ -71,10 +71,8 @@ public class ExecutionService {
         var b = buildRepository.save(Build.builder().issuesJson(JsonUtil.serialize(issues)).startAt(LocalDateTime.now()).build());
         var buildHasProjects = merges.stream().map(m -> {
             var p = projectRepository.findByName(m.getProjectName())
-                    .orElse(Project.builder().name(m.getProjectName()).buildCheckSum("").build());
-            if (p.getId() != null && m.getCheckSum() != null) {
-                p.setBuildCheckSum(m.getCheckSum());
-            }
+                    .orElse(Project.builder().name(m.getProjectName()).build());
+            p.setBuildCheckSum(m.getCheckSum());
             p = projectRepository.save(p);
             return BuildHasProject.builder().project(p).build(b).mergesJson(JsonUtil.serialize(m)).mergeCheckSum(m.getCheckSum()).lastCommitSha(m.getLastCommitSha()).build();
         }).filter(Objects::nonNull).collect(Collectors.toList());

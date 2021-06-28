@@ -85,7 +85,8 @@ public class MergeService {
             throw new Exception("Invalid configuration: bro.flow.stage.branchName or bro.flow.stage.pushCmd empty!");
         }
         var project = projectRepository.findByName(merge.getProjectName());
-        if (project.isPresent() && project.get().getBuildCheckSum().equals(merge.getCheckSum())) {
+        if (project.isPresent() && project.get().getBuildCheckSum() != null && project.get().getBuildCheckSum().equals(merge.getCheckSum())) {
+            log.trace("Push skipped. Project '{}', checksum equal {}", merge.getProjectName(), project.get().getBuildCheckSum());
             return;
         }
         var cmd = config.getStage().getPushCmd();
