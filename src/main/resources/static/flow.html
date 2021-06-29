@@ -200,14 +200,14 @@
                                                         {{#branch}}
 
                                                         {{#merged}}
-                                                        <a href="{{uri}}" class="btn btn-xs btn-soft-warning">{{branchName}}</a>
+                                                        <a href="{{uri}}" class="btn btn-xs badge-outline-warning">{{branchName}}</a>
                                                         {{/merged}}
                                                         {{^merged}}
                                                             {{#mergeLocalSuccess}}
-                                                            <a href="{{uri}}" class="btn btn-xs btn-outline-success btn-rounded">{{branchName}}</a>
+                                                            <a href="{{uri}}" class="btn btn-xs badge-outline-success btn-rounded">{{branchName}}</a>
                                                             {{/mergeLocalSuccess}}
                                                             {{^mergeLocalSuccess}}
-                                                            <a href="{{uri}}" class="btn btn-xs btn-soft-danger">{{branchName}}</a>
+                                                            <a href="{{uri}}" class="btn btn-xs badge-outline-danger">{{branchName}}</a>
                                                             {{/mergeLocalSuccess}}
                                                         {{/merged}}
                                                         {{/branch}}

@@ -2,6 +2,7 @@ package ru.timebook.bro.flow.modules.build;
 
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.stereotype.Service;
 import ru.timebook.bro.flow.modules.git.Merge;
 import ru.timebook.bro.flow.utils.DateTimeUtil;
@@ -24,11 +25,14 @@ public class FlowService {
         @EqualsAndHashCode(callSuper = true)
         public static class PullRequest extends ru.timebook.bro.flow.modules.taskTracker.Issue.PullRequest {
         }
+
         public String getMergeOut() {
             var out = this.getPullRequests().stream()
                     .filter(p -> p.getBranch() != null)
-                    .map(p -> p.getProjectName() + ":" + p.getBranch().getBranchName() + "\n" + p.getBranch().getStdout())
-                    .collect(Collectors.joining("\n\n"));
+                    .map(p -> {
+                        var stdOut = !StringUtils.isEmpty(p.getBranch().getStdout()) ? p.getBranch().getStdout() : "(empty)";
+                        return p.getProjectName() + ":" + p.getBranch().getBranchName() + "\n" + stdOut;
+                    }).collect(Collectors.joining("\n\n"));
             return out.trim();
         }
     }
