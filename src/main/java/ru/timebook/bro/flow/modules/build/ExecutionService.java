@@ -1,5 +1,6 @@
 package ru.timebook.bro.flow.modules.build;
 
+import com.google.common.base.Stopwatch;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -51,6 +52,7 @@ public class ExecutionService {
 
     public Response mergeAndPush() throws Exception {
         log.debug("Start");
+        var timer = Stopwatch.createStarted();
         var issues = new ArrayList<Issue>();
         taskTrackers.forEach((v) -> issues.addAll(v.getForMerge()));
         gitRepositories.forEach((v) -> v.getInfo(issues));
@@ -63,7 +65,7 @@ public class ExecutionService {
         issues.forEach(MergeService::updateCommitters);
         createBuild(issues, merges);
         mergeService.clean();
-        log.debug("Complete");
+        log.debug("Complete: {}", timer.stop());
         return Response.builder().issues(issues).merges(merges).build();
     }
 
