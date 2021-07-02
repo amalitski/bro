@@ -6,6 +6,7 @@ bro:
       uri: https://${bro.flow.stage.name}
       branchName: stages/${bro.flow.stage.name}
       pushCmd: git push -u origin :${bro.flow.stage.branchName}; git checkout -b ${bro.flow.stage.branchName} && git push -u origin ${bro.flow.stage.branchName}
+      mergeCmd: git merge -m "Merge branch '{branchName}' into stage '${bro.flow.stage.branchName}'" origin/{branchName} --no-ff
       cronReceive: "0 */10 * * * ?"
       basePath: /bro
       git:
