@@ -63,6 +63,7 @@ public class Merge {
         public static class Commit {
             private String hash;
             private String committerEmail;
+            private String committerName;
             private String committerDate;
             private String committerAvatarUri;
             private String subject;
