@@ -5,21 +5,36 @@ artifact: build
 from: maven:3.8-openjdk-16
 git:
   - add: /
-    to: /usr/src/bro
+    to: /app
     excludePaths:
       - .gitlab-ci.yml
       - .helm
       - werf.yaml
+      - ssh.private
 shell:
   beforeInstall:
-    - mvn -B -s /usr/share/maven/ref/settings-docker.xml dependency:go-offline
+    - mkdir /app
   install:
+    - cd /app
+    - mvn -B -s /usr/share/maven/ref/settings-docker.xml dependency:go-offline
     - mvn -B -am -s /usr/share/maven/ref/settings-docker.xml package
 ---
 image: bro
 from: maven:3.8-openjdk-16
+git:
+  - add: /.docker/ssh.private
+    to: /app/ssh.private
 import:
   - artifact: build
     after: install
-    add: /www/target/bro.jar
-    to: /app/
+    add: /app/target/bro.jar
+    to: /app/bro.jar
+shell:
+  beforeInstall:
+    - mkdir /app
+    - ls -la /app
+  setup:
+    - cd /app
+    - java $JAVA_OPTS -jar *.jar
+docker:
+  WORKDIR: /app
