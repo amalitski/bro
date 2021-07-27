@@ -24,7 +24,7 @@ class FlowApplicationTests {
     @Autowired
     private Config config;
 
-    @Test
+/*     @Test
     void httpsTest() {
         Client client = ClientBuilder.newClient();
         WebTarget webTarget = client.target("https://ya.ru");
@@ -32,7 +32,7 @@ class FlowApplicationTests {
         invocationBuilder.accept("application/json");
         Response response = invocationBuilder.get();
         Assert.isTrue(response.getStatus() == 200, "HTTPS uri successful loaded");
-    }
+    } */
 
     @Test
     void configTest() {

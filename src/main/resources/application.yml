@@ -2,55 +2,56 @@ debug: false
 bro:
   flow:
     stage:
-      name: default.domain.com
-      uri: https://${bro.flow.stage.name}
-      branchName: stages/${bro.flow.stage.name}
-      pushCmd: git push -u origin :${bro.flow.stage.branchName}; git checkout -b ${bro.flow.stage.branchName} && git push -u origin ${bro.flow.stage.branchName}
-      cronReceive: "0 */10 * * * ?"
-      basePath: /bro
+      name: test-kube.timebook.ru
+      cronReceive: "0 */1 * * * ?"
       git:
-        userName: Bender Rodriguez
-        userEmail: bender@company.com
-      temp:
-        initDir: init
-        tempDir: temp/projects
-        cleanAfter: P-14D
+        userEmail: bender@corp.timebook.ru
     task-trackers:
       redmine:
-        host: https://redmine.domain.com
-        apiKey: ACCESS_TOKEN
-        afterUpdateTime: P-30D # period for the tasks where changes may be applied
-        timeout: 30000
+        host: https://redmine.timebook.ru
+        apiKey: {{ pluck .Values.werf.env .Values.token.redmine | first | default .Values.token.redmine._default }}
+        enabled: true
         trackers:
-          - id: 001
+          - id: 13 # Исправление/доработка
         statuses:
-          - id: 002
+          - id: 4 # Ожидает
             needMerge: false
-          - id: 003
+          - id: 7 # Создан pull request
             needMerge: true
-          - id: 004
+          - id: 9 # Требуется проверка
             needMerge: true
         custom-fields:
-          - id: 005
-          - id: 006
-          - id: 007
-        enabled: true
+          - id: 1 # Pull Request back-end
+          - id: 4 # Pull Request front-end
+          - id: 19 # Pull Request erpi
       jira:
-        host: https://company.atlassian.net
-        username: USERNAME
-        apiToken: API_TOKEN
-        issues:
-          mergeJQL: "'Stage[Select List (multiple choices)]'=${bro.flow.stage.name} AND statusCategory = 4"
-          labelDeployed: deployed
+        host: https://timebook-jira.atlassian.net
+        username: it@timebook.ru
+        apiToken: {{ pluck .Values.werf.env .Values.token.jira | first | default .Values.token.jira._default }}
         enabled: true
     repositories:
       gitlab:
-        host: https://gitlab.domain.com
-        token: ACCESS_TOKEN
-        proxy:
-        enableRequestLogging: false
-        enabled: true
-        timeout: 30000
+        host: https://gitlab.timebook.cloud
+        token: {{ pluck .Values.werf.env .Values.token.gitlab | first | default .Values.token.gitlab._default }}
+        repositories:
+          - path: DEVOPS/bender
+            preMerge: master
+          - path: timebook/timebook
+            preMerge: master
+          - path: timebook/timebook.web-client
+            preMerge: master
+          - path: IT/DEV/shift-sender
+            preMerge: master
+          - path: IT/DEV/Node-MS/auchan-ms
+            preMerge: master
+          - path: IT/DEV/Node-MS/lenta-ms
+            preMerge: master
+          - path: IT/DEV/Node-MS/document-ms
+            preMerge: master
+          - path: IT/DEV/web-sockets
+            preMerge: master
+          - path: IT/DEV/recognition/surf
+            preMerge: master
 
 logging:
   pattern:
