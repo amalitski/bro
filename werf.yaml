@@ -18,7 +18,7 @@ shell:
     - mkdir /app
   install:
     - cd /app
-    - mvn -B -s /usr/share/maven/ref/settings-docker.xml dependency:go-offline
+    - mvn -B -s /usr/share/maven/ref/settings-docker.xml dependency
     - mvn -B -am -s /usr/share/maven/ref/settings-docker.xml package
 ---
 image: bro
