@@ -4,16 +4,18 @@ metadata:
   name: "{{ .Chart.Name }}-config"
 data:
   application.yml: |
+    debug: {{ pluck .Values.werf.env .Values.debug | first | default .Values.debug._default }}
+
     bro:
       flow:
         stage:
-          name: test-kube.timebook.ru
-          cronReceive: “0 */1 * * * ?”
+          name: {{ .Values.global.ci_url }}
+          cronReceive: "0 */1 * * * ?"
           git:
-            userEmail: bender@corp.timebook.ru
+            userEmail: {{ pluck .Values.werf.env .Values.bro.flow.stage.git.userEmail | first | default .Values.bro.flow.stage.git.userEmail._default }}
         task-trackers:
           redmine:
-            host: https://redmine.timebook.ru
+            host: {{ pluck .Values.werf.env .Values.bro.flow.task-trackers.redmine.host | first | default .Values.bro.flow.task-trackers.redmine.host._default }}
             apiKey: {{ pluck .Values.werf.env .Values.token.redmine | first | default .Values.token.redmine._default }}
             enabled: true
             trackers:
@@ -30,13 +32,13 @@ data:
               - id: 4 # Pull Request front-end
               - id: 19 # Pull Request erpi
           jira:
-            host: https://timebook-jira.atlassian.net
-            username: it@timebook.ru
+            host: {{ pluck .Values.werf.env .Values.bro.flow.task-trackers.jira.host | first | default .Values.bro.flow.task-trackers.jira.host._default }}
+            username: {{ pluck .Values.werf.env .Values.bro.flow.task-trackers.jira.username | first | default .Values.bro.flow.task-trackers.jira.username._default }}
             apiToken: {{ pluck .Values.werf.env .Values.token.jira | first | default .Values.token.jira._default }}
             enabled: true
         repositories:
           gitlab:
-            host: https://gitlab.timebook.cloud
+            host: {{ pluck .Values.werf.env .Values.bro.flow.repositories.gitlab.host | first | default .Values.bro.flow.repositories.gitlab.host._default }}
             token: {{ pluck .Values.werf.env .Values.token.gitlab | first | default .Values.token.gitlab._default }}
             repositories:
               - path: DEVOPS/bender
@@ -57,12 +59,45 @@ data:
                 preMerge: master
               - path: IT/DEV/recognition/surf
                 preMerge: master
-  git_key.private: |
-    -----BEGIN OPENSSH PRIVATE KEY-----
-    b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
-    QyNTUxOQAAACA8LF0emjQBIJI5xtyQwc848GVmL9sDX4qu7OW90FPlKwAAAJjbDSNx2w0j
-    cQAAAAtzc2gtZWQyNTUxOQAAACA8LF0emjQBIJI5xtyQwc848GVmL9sDX4qu7OW90FPlKw
-    AAAECvdnetSPfdEvkOIHZwzEVvX/Bl5tpYejyZ4oMj/fbPYTwsXR6aNAEgkjnG3JDBzzjw
-    ZWYv2wNfiq7s5b3QU+UrAAAAD2Jyb0B0aW1lYm9vay5ydQECAwQFBg==
-    -----END OPENSSH PRIVATE KEY-----
 
+    logging:
+      pattern:
+        console: "%d{yyyy-MM-dd HH:mm:ss} %clr(${LOG_LEVEL_PATTERN:%5p}) %msg%n"
+      level:
+        ru.timebook.bro.*: {{ pluck .Values.werf.env .Values.logging | first | default .Values.logging._default }}
+
+    spring:
+      main:
+        banner-mode: off
+      datasource:
+        url: {{ pluck .Values.werf.env .Values.spring.datasource.url | first | default .Values.spring.datasource.url._default }}
+        driver-class-name: org.h2.Driver
+        username: {{ pluck .Values.werf.env .Values.spring.datasource.username | first | default .Values.spring.datasource.username._default }}
+        password: {{ pluck .Values.werf.env .Values.spring.datasource.password | first | default .Values.spring.datasource.password._default }}
+      jpa:
+        database-platform: org.hibernate.dialect.H2Dialect
+        hibernate:
+          ddl-auto: update
+      jackson:
+        property-naming-strategy: com.fasterxml.jackson.databind.PropertyNamingStrategy.SnakeCaseStrategy
+      web:
+        resources:
+          static-locations: file:src/main/resources/static/
+          cache:
+            cachecontrol:
+              no-cache: true
+      mustache:
+        suffix: .html
+        prefix: classpath:/static/
+      groovy:
+        template:
+          check-template-location: false
+
+    server:
+      tomcat:
+        threads:
+          max: {{ pluck .Values.werf.env .Values.server.tomcat.threads.max | first | default .Values.server.tomcat.threads.max._default }}
+          min-spare: {{ pluck .Values.werf.env .Values.server.tomcat.threads.min-spare | first | default .Values.server.tomcat.threads.min-spare._default }}
+        connection-timeout: {{ pluck .Values.werf.env .Values.server.tomcat.connection-timeout | first | default .Values.server.tomcat.connection-timeout._default }}
+      servlet:
+        context-path: ${bro.flow.stage.basePath}

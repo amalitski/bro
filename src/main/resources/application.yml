@@ -6,40 +6,40 @@ bro:
       name: test-kube.timebook.ru
       cronReceive: "0 */1 * * * ?"
       git:
-        userEmail: bender@corp.timebook.ru
+        userEmail:
     task-trackers:
       redmine:
         host: https://redmine.timebook.ru
-        apiKey: {{ pluck .Values.werf.env .Values.token.redmine | first | default .Values.token.redmine._default }}
+        apiKey:
         enabled: true
         trackers:
-          - id: 13 # Исправление/доработка
+          - id: 13
         statuses:
-          - id: 4 # Ожидает
+          - id: 4
             needMerge: false
-          - id: 7 # Создан pull request
+          - id: 7
             needMerge: true
-          - id: 9 # Требуется проверка
+          - id: 9
             needMerge: true
         custom-fields:
-          - id: 1 # Pull Request back-end
-          - id: 4 # Pull Request front-end
-          - id: 19 # Pull Request erpi
+          - id: 1
+          - id: 4
+          - id: 19
       jira:
         host: https://timebook-jira.atlassian.net
-        username: it@timebook.ru
-        apiToken: {{ pluck .Values.werf.env .Values.token.jira | first | default .Values.token.jira._default }}
+        username:
+        apiToken:
         enabled: true
     repositories:
       gitlab:
         host: https://gitlab.timebook.cloud
-        token: {{ pluck .Values.werf.env .Values.token.gitlab | first | default .Values.token.gitlab._default }}
+        token:
         repositories:
           - path: DEVOPS/bender
             preMerge: master
           - path: timebook/timebook
             preMerge: master
-          - path: timebook/timebook.web-client
+          - path: tkimebook/timebook.web-client
             preMerge: master
           - path: IT/DEV/shift-sender
             preMerge: master
@@ -64,10 +64,10 @@ spring:
   main:
     banner-mode: off
   datasource:
-    url: jdbc:h2:file:./temp/database/store
+    url:
     driver-class-name: org.h2.Driver
-    username: bender
-    password: bender
+    username:
+    password:
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:

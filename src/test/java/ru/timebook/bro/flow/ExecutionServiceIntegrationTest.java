@@ -49,7 +49,7 @@ public class ExecutionServiceIntegrationTest {
         logger.info(out);
     }
 
- /*    @Test
+    @Test
     void httpsTest() {
         Client client = ClientBuilder.newClient();
         WebTarget webTarget = client.target(config.getRepositories().getGitlab().getHost());
@@ -58,7 +58,7 @@ public class ExecutionServiceIntegrationTest {
         Response response = invocationBuilder.get();
         logger.info("Response status: {}", response.getStatus());
         Assert.isTrue(response.getStatus() >= 200, "Load HTTPS uri");
-    } */
+    }
 
     @Test
     void buildRelationTest() {

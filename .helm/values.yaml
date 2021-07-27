@@ -25,3 +25,47 @@ java_opts:
 ingress_class:
   _default: nginx
 
+debug:
+  _default: false
+
+bro:
+  flow:
+    stage:
+      git:
+        userEmail:
+          _default: "bender@corp.timebook.ru"
+    task-trackers:
+      redmine:
+        host:
+          _default: "https://redmine.timebook.ru"
+      jira:
+        host:
+          _default: "https://timebook-jira.atlassian.net"
+        username:
+          _default: "it@timebook.ru"
+    repositories:
+      gitlab:
+        host:
+          _default: "https://gitlab.timebook.cloud"
+
+logging:
+  _default: "trace"
+
+spring:
+  datasource:
+    url:
+      _default: "jdbc:h2:file:./temp/database/store"
+    username:
+      _default: "bender"
+    password:
+      _default: "bender"
+
+server:
+  tomcat:
+    threads:
+      max:
+        _default: 5
+      min-spare:
+        _default: 1
+    connection-timeout:
+      _default: 30
