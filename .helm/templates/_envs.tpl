@@ -1,4 +1,4 @@
 {{- define "common_envs" }}
 - name: JAVA_OPTS
-  value: {{ pluck .Values.global.env .Values.java_opts | first | default .Values.java_opts._default }}
+  value: {{ pluck .Values.werf.env .Values.java_opts | first | default .Values.java_opts._default }}
 {{- end }}

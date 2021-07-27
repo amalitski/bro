@@ -14,7 +14,7 @@ data:
         task-trackers:
           redmine:
             host: https://redmine.timebook.ru
-            apiKey: {{ pluck .Values.global.env .Values.token.redmine | first | default .Values.token.redmine._default }}
+            apiKey: {{ pluck .Values.werf.env .Values.token.redmine | first | default .Values.token.redmine._default }}
             enabled: true
             trackers:
               - id: 13 # Исправление/доработка
@@ -32,12 +32,12 @@ data:
           jira:
             host: https://timebook-jira.atlassian.net
             username: it@timebook.ru
-            apiToken: {{ pluck .Values.global.env .Values.token.jira | first | default .Values.token.jira._default }}
+            apiToken: {{ pluck .Values.werf.env .Values.token.jira | first | default .Values.token.jira._default }}
             enabled: true
         repositories:
           gitlab:
             host: https://gitlab.timebook.cloud
-            token: {{ pluck .Values.global.env .Values.token.gitlab | first | default .Values.token.gitlab._default }}
+            token: {{ pluck .Values.werf.env .Values.token.gitlab | first | default .Values.token.gitlab._default }}
             repositories:
               - path: DEVOPS/bender
                 preMerge: master

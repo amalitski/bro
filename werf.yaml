@@ -12,12 +12,12 @@ git:
       - werf.yaml
     stageDependencies:
       install:
-      - '*'
+      - 'src/**/*'
+      - 'pom.xml'
 shell:
-  beforeInstall:
-    - mkdir /app
   install:
     - cd /app
+    - export JAVA_OPTS="-Dhttps.protocols=TLSv1.2"
     - mvn -B -s /usr/share/maven/ref/settings-docker.xml dependency:go-offline
     - mvn -B -am -s /usr/share/maven/ref/settings-docker.xml package
 ---
@@ -31,5 +31,5 @@ import:
 docker:
   WORKDIR: /app
 shell:
-  beforeInstall:
+  install:
     - mkdir /app

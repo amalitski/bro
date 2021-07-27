@@ -3,7 +3,7 @@ app:
   port:
     _default: 8080
   replicas:
-    _default: 1
+    _default: 2
   resources:
     requests:
       cpu:

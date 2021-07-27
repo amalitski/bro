@@ -4,7 +4,7 @@ kind: Deployment
 metadata:
   name: {{ .Chart.Name | quote }}
 spec:
-  replicas: {{ pluck .Values.global.env .Values.app.replicas | first | default .Values.app.replicas._default }}
+  replicas: {{ pluck .Values.werf.env .Values.app.replicas | first | default .Values.app.replicas._default }}
   selector:
     matchLabels:
       app: {{ .Chart.Name | quote }}
@@ -29,7 +29,7 @@ spec:
             name: "{{ .Chart.Name }}-config"
       containers:
       - name: {{ .Chart.Name | quote }}
-{{ tuple "bro" . | include "werf_container_image" | indent 8 }}
+{{ tuple "bro" . | include ".Values.werf.image.IMAGE_NAME" | indent 8 }}
         workingDir: /app
         securityContext:
           runAsUser: 7000
@@ -43,10 +43,10 @@ spec:
           subPath: git_key.private
         resources:
           requests:
-            cpu: {{ pluck .Values.global.env .Values.app.resources.requests.cpu | first | default .Values.app.resources.requests.cpu._default }}
-            memory: {{ pluck .Values.global.env .Values.app.resources.requests.memory | first | default .Values.app.resources.requests.memory._default }}
+            cpu: {{ pluck .Values.werf.env .Values.app.resources.requests.cpu | first | default .Values.app.resources.requests.cpu._default }}
+            memory: {{ pluck .Values.werf.env .Values.app.resources.requests.memory | first | default .Values.app.resources.requests.memory._default }}
           limits:
-            memory: {{ pluck .Values.global.env .Values.app.resources.limits.memory | first | default .Values.app.resources.limits.memory._default }}
+            memory: {{ pluck .Values.werf.env .Values.app.resources.limits.memory | first | default .Values.app.resources.limits.memory._default }}
         ports:
         - name: http
           containerPort: 8080
@@ -65,8 +65,4 @@ spec:
 {{ tuple "face" . | include "werf_container_env" | indent 8 }}
 {{- include "common_envs" . | indent 8 }}
         command:
-        - "/bin/bash"
-        - "-c"
-        - "--"
-        args:
         - "java $JAVA_OPTS -jar bro.jar"

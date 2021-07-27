@@ -4,7 +4,7 @@ kind: Ingress
 metadata:
   name: "{{ .Chart.Name }}"
   annotations:
-    kubernetes.io/ingress.class: {{ pluck .Values.global.env .Values.ingress_class | first | default .Values.ingress_class._default }}
+    kubernetes.io/ingress.class: {{ pluck .Values.werf.env .Values.ingress_class | first | default .Values.ingress_class._default }}
 spec:
   tls:
   - hosts:

@@ -8,4 +8,3 @@
 /docker-compose.override.yml
 /application.yml
 /temp
-/.werf_secret_key
