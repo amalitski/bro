@@ -1,0 +1,72 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name | quote }}
+spec:
+  replicas: {{ pluck .Values.global.env .Values.app.replicas | first | default .Values.app.replicas._default }}
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name | quote }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  minReadySeconds: 10
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name | quote }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/01-configmap.yaml") . | sha256sum }}
+    spec:
+      imagePullSecrets:
+      - name: registrysecret
+      volumes:
+        - name: configs
+          configMap:
+            name: "{{ .Chart.Name }}-config"
+      containers:
+      - name: {{ .Chart.Name | quote }}
+{{ tuple "bro" . | include "werf_container_image" | indent 8 }}
+        workingDir: /app
+        securityContext:
+          runAsUser: 7000
+          allowPrivilegeEscalation: false
+        volumeMounts:
+        - name: configs
+          mountPath: /app/application.yml
+          subPath: application.yml
+        - name: ssh_key
+          mountPath: /app/git_key.private
+          subPath: git_key.private
+        resources:
+          requests:
+            cpu: {{ pluck .Values.global.env .Values.app.resources.requests.cpu | first | default .Values.app.resources.requests.cpu._default }}
+            memory: {{ pluck .Values.global.env .Values.app.resources.requests.memory | first | default .Values.app.resources.requests.memory._default }}
+          limits:
+            memory: {{ pluck .Values.global.env .Values.app.resources.limits.memory | first | default .Values.app.resources.limits.memory._default }}
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        readinessProbe:
+          tcpSocket:
+            port: 8080
+          timeoutSeconds: 5
+          initialDelaySeconds: 5
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+          timeoutSeconds: 1
+          initialDelaySeconds: 10
+        env:
+{{ tuple "face" . | include "werf_container_env" | indent 8 }}
+{{- include "common_envs" . | indent 8 }}
+        command:
+        - "/bin/bash"
+        - "-c"
+        - "--"
+        args:
+        - "java $JAVA_OPTS -jar bro.jar"

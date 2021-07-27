@@ -10,7 +10,9 @@ git:
       - .gitlab-ci.yml
       - .helm
       - werf.yaml
-      - ssh.private
+    stageDependencies:
+      install:
+      - '*'
 shell:
   beforeInstall:
     - mkdir /app
@@ -21,20 +23,13 @@ shell:
 ---
 image: bro
 from: maven:3.8-openjdk-16
-git:
-  - add: /.docker/ssh.private
-    to: /app/ssh.private
 import:
   - artifact: build
     after: install
     add: /app/target/bro.jar
     to: /app/bro.jar
+docker:
+  WORKDIR: /app
 shell:
   beforeInstall:
     - mkdir /app
-    - ls -la /app
-  setup:
-    - cd /app
-    - java $JAVA_OPTS -jar *.jar
-docker:
-  WORKDIR: /app

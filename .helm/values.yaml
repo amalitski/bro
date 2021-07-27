@@ -1,0 +1,27 @@
+---
+app:
+  port:
+    _default: 8080
+  replicas:
+    _default: 1
+  resources:
+    requests:
+      cpu:
+        _default: 50m
+        production: 50m
+      memory:
+        _default: 1024Mi
+        rc: 512Mi
+        production: 512M
+    limits:
+      memory:
+        _default: 1024Mi
+        rc: 512Mi
+        production: 128G
+
+java_opts:
+  _default: "-Dhttps.protocols=TLSv1.2 -Xms64m -Xmx256m -Xss256k"
+
+ingress_class:
+  _default: nginx
+
