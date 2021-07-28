@@ -73,7 +73,7 @@ spec:
 ---
 apiVersion: v1
 data:
-  id_rsa: {{ tuple "id_rsa" . | include "werf_secret_file" | b64enc }}
+  id_rsa: {{ werf_secret_file "id_rsa" | b64enc }}
 kind: Secret
 metadata:
   name: id-rsa
