@@ -2,19 +2,19 @@
 apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
 metadata:
-  name: "{{ .Chart.Name }}"
+  name: {{ .Chart.Name }}
   annotations:
     kubernetes.io/ingress.class: {{ pluck .Values.werf.env .Values.ingress_class | first | default .Values.ingress_class._default }}
 spec:
   tls:
   - hosts:
-    - {{ .Values.global.ci_url | printf "%s" }}
+    - {{ .Values.global.ci_url }}
     secretName: common-crt-tls
   rules:
-  - host: {{ .Values.global.ci_url | printf "%s" }}
+  - host: {{ .Values.global.ci_url }}
     http:
       paths:
       - path: /bro
         backend:
-          serviceName: "{{ .Chart.Name }}"
+          serviceName: {{ .Chart.Name }}
           servicePort: {{ pluck .Values.werf.env .Values.app.port | first | default .Values.app.port._default }}
