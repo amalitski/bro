@@ -2,12 +2,12 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Chart.Name | quote }}
+  name: {{ .Chart.Name }}
 spec:
   replicas: {{ pluck .Values.werf.env .Values.app.replicas | first | default .Values.app.replicas._default }}
   selector:
     matchLabels:
-      app: {{ .Chart.Name | quote }}
+      app: {{ .Chart.Name }}
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -17,7 +17,7 @@ spec:
   template:
     metadata:
       labels:
-        app: {{ .Chart.Name | quote }}
+        app: {{ .Chart.Name }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/01-configmap.yaml") . | sha256sum }}
     spec:
@@ -26,13 +26,13 @@ spec:
       volumes:
         - name: configs
           configMap:
-            name: "{{ .Chart.Name }}-config"
+            name: {{ .Chart.Name }}-config
         - name: id-rsa
           secret:
             defaultMode: 0600
             secretName: id-rsa
       containers:
-      - name: {{ .Chart.Name | quote }}
+      - name: {{ .Chart.Name }}
         image: {{ first (pluck .Chart.Name .Values.werf.image) }}
         workingDir: /app
         securityContext:
