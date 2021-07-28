@@ -3,6 +3,7 @@ variables:
   WERF_VERSION: "1.2 ea"
 
 .base_werf: &base_werf
+  - set -x
   - type multiwerf && . $(multiwerf use ${WERF_VERSION} --as-file)
   - type werf && source $(werf ci-env gitlab --as-file --verbose)
 
