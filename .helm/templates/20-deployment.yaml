@@ -35,6 +35,9 @@ spec:
       - name: {{ .Chart.Name }}
         image: {{ first (pluck .Chart.Name .Values.werf.image) }}
         workingDir: /app
+        securityContext:
+          runAsUser: root
+          allowPrivilegeEscalation: false
         volumeMounts:
         - name: configs
           mountPath: /app/application.yml
