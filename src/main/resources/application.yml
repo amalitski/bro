@@ -1,73 +1,70 @@
 debug: false
-
 bro:
   flow:
     stage:
-      name: test-kube.timebook.ru
-      cronReceive: "0 */1 * * * ?"
+      name: default.domain.com
+      uri: https://${bro.flow.stage.name}
+      branchName: stages/${bro.flow.stage.name}
+      pushCmd: git push -u origin :${bro.flow.stage.branchName}; git checkout -b ${bro.flow.stage.branchName} && git push -u origin ${bro.flow.stage.branchName}
+      cronReceive: "0 */10 * * * ?"
+      basePath: /bro
       git:
-        userEmail:
+        userName: Bender Rodriguez
+        userEmail: bender@company.com
+      temp:
+        initDir: init
+        tempDir: temp/projects
+        cleanAfter: P-14D
     task-trackers:
       redmine:
-        host: https://redmine.timebook.ru
-        apiKey:
-        enabled: true
+        host: https://redmine.domain.com
+        apiKey: ACCESS_TOKEN
+        afterUpdateTime: P-30D # period for the tasks where changes may be applied
+        timeout: 30000
         trackers:
-          - id: 13
+          - id: 001
         statuses:
-          - id: 4
+          - id: 002
             needMerge: false
-          - id: 7
+          - id: 003
             needMerge: true
-          - id: 9
+          - id: 004
             needMerge: true
         custom-fields:
-          - id: 1
-          - id: 4
-          - id: 19
+          - id: 005
+          - id: 006
+          - id: 007
+        enabled: true
       jira:
-        host: https://timebook-jira.atlassian.net
-        username:
-        apiToken:
+        host: https://company.atlassian.net
+        username: USERNAME
+        apiToken: API_TOKEN
+        issues:
+          mergeJQL: "'Stage[Select List (multiple choices)]'=${bro.flow.stage.name} AND statusCategory = 4"
+          labelDeployed: deployed
         enabled: true
     repositories:
       gitlab:
-        host: https://gitlab.timebook.cloud
-        token:
-        repositories:
-          - path: DEVOPS/bender
-            preMerge: master
-          - path: timebook/timebook
-            preMerge: master
-          - path: tkimebook/timebook.web-client
-            preMerge: master
-          - path: IT/DEV/shift-sender
-            preMerge: master
-          - path: IT/DEV/Node-MS/auchan-ms
-            preMerge: master
-          - path: IT/DEV/Node-MS/lenta-ms
-            preMerge: master
-          - path: IT/DEV/Node-MS/document-ms
-            preMerge: master
-          - path: IT/DEV/web-sockets
-            preMerge: master
-          - path: IT/DEV/recognition/surf
-            preMerge: master
+        host: https://gitlab.domain.com
+        token: ACCESS_TOKEN
+        proxy:
+        enableRequestLogging: false
+        enabled: true
+        timeout: 30000
 
 logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} %clr(${LOG_LEVEL_PATTERN:%5p}) %msg%n"
   level:
     ru.timebook.bro.*: trace
-
 spring:
   main:
     banner-mode: off
   datasource:
-    url:
+    url: jdbc:h2:file:./temp/database/store
     driver-class-name: org.h2.Driver
-    username:
-    password:
+    username: bender
+    password: bender
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
@@ -86,7 +83,6 @@ spring:
   groovy:
     template:
       check-template-location: false
-
 server:
   tomcat:
     threads:
