@@ -8,10 +8,10 @@ metadata:
 spec:
   tls:
   - hosts:
-    - {{ .Values.ci_url }}
+    - {{ .Values.env_url }}
     secretName: common-crt-tls
   rules:
-  - host: {{ .Values.ci_url }}
+  - host: {{ .Values.env_url }}
     http:
       paths:
       - path: /bro
