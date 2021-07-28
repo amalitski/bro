@@ -15,7 +15,7 @@ data:
             userEmail: {{ pluck .Values.werf.env .Values.bro.flow.stage.git.userEmail | first | default .Values.bro.flow.stage.git.userEmail._default }}
         task-trackers:
           redmine:
-            host: {{ pluck .Values.werf.env .Values.bro.flow.task-trackers.redmine.host | first | default .Values.bro.flow.task-trackers.redmine.host._default }}
+            host: {{ pluck .Values.werf.env .Values.bro.flow.task_trackers.redmine.host | first | default .Values.bro.flow.task_trackers.redmine.host._default }}
             apiKey: {{ pluck .Values.werf.env .Values.token.redmine | first | default .Values.token.redmine._default }}
             enabled: true
             trackers:
@@ -32,8 +32,8 @@ data:
               - id: 4 # Pull Request front-end
               - id: 19 # Pull Request erpi
           jira:
-            host: {{ pluck .Values.werf.env .Values.bro.flow.task-trackers.jira.host | first | default .Values.bro.flow.task-trackers.jira.host._default }}
-            username: {{ pluck .Values.werf.env .Values.bro.flow.task-trackers.jira.username | first | default .Values.bro.flow.task-trackers.jira.username._default }}
+            host: {{ pluck .Values.werf.env .Values.bro.flow.task_trackers.jira.host | first | default .Values.bro.flow.task_trackers.jira.host._default }}
+            username: {{ pluck .Values.werf.env .Values.bro.flow.task_trackers.jira.username | first | default .Values.bro.flow.task_trackers.jira.username._default }}
             apiToken: {{ pluck .Values.werf.env .Values.token.jira | first | default .Values.token.jira._default }}
             enabled: true
         repositories:
@@ -97,7 +97,7 @@ data:
       tomcat:
         threads:
           max: {{ pluck .Values.werf.env .Values.server.tomcat.threads.max | first | default .Values.server.tomcat.threads.max._default }}
-          min-spare: {{ pluck .Values.werf.env .Values.server.tomcat.threads.min-spare | first | default .Values.server.tomcat.threads.min-spare._default }}
-        connection-timeout: {{ pluck .Values.werf.env .Values.server.tomcat.connection-timeout | first | default .Values.server.tomcat.connection-timeout._default }}
+          min-spare: {{ pluck .Values.werf.env .Values.server.tomcat.threads.min_spare | first | default .Values.server.tomcat.threads.min_spare._default }}
+        connection-timeout: {{ pluck .Values.werf.env .Values.server.tomcat.connection_timeout | first | default .Values.server.tomcat.connection_timeout._default }}
       servlet:
         context-path: ${bro.flow.stage.basePath}

@@ -34,7 +34,7 @@ bro:
       git:
         userEmail:
           _default: "bender@corp.timebook.ru"
-    task-trackers:
+    task_trackers:
       redmine:
         host:
           _default: "https://redmine.timebook.ru"
@@ -65,7 +65,7 @@ server:
     threads:
       max:
         _default: 5
-      min-spare:
+      min_spare:
         _default: 1
-    connection-timeout:
+    connection_timeout:
       _default: 30
