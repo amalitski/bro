@@ -8,10 +8,10 @@ metadata:
 spec:
   tls:
   - hosts:
-    - "{{ .Values.global.ci_url }}"
+    - {{ .Values.global.ci_url | printf "%s" }}
     secretName: common-crt-tls
   rules:
-  - host: "{{ .Values.global.ci_url }}"
+  - host: {{ .Values.global.ci_url | printf "%s" }}
     http:
       paths:
       - path: /bro
