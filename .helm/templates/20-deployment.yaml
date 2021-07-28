@@ -68,8 +68,7 @@ spec:
           initialDelaySeconds: 10
         env:
 {{- include "common_envs" . | indent 8 }}
-        command:
-        - "java $JAVA_OPTS -jar bro.jar"
+        command: ["sh", "-c", "java $JAVA_OPTS -jar bro.jar"]
 ---
 apiVersion: v1
 data:
