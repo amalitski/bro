@@ -18,6 +18,7 @@ shell:
   install:
     - cd /app
     - export JAVA_OPTS="-Dhttps.protocols=TLSv1.2"
+    - export MAVEN_OPTS="-Dhttps.protocols=TLSv1.2"
     - mvn -U clean package
 ---
 image: bro
