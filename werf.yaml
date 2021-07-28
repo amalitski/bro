@@ -30,7 +30,6 @@ import:
     to: /app/bro.jar
 docker:
   WORKDIR: /app
-  USER: root
 shell:
   install:
     - mkdir /app
