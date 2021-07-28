@@ -17,4 +17,4 @@ spec:
       - path: /bro
         backend:
           serviceName: "{{ .Chart.Name }}"
-          servicePort: 8080
+          servicePort: {{ pluck .Values.werf.env .Values.app.port | first | default .Values.app.port._default }}

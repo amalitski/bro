@@ -33,7 +33,7 @@ spec:
             secretName: id-rsa
       containers:
       - name: {{ .Chart.Name | quote }}
-{{ tuple "bro" . | include ".Values.werf.image.IMAGE_NAME" | indent 8 }}
+        image: {{ first (pluck .Chart.Name .Values.werf.image) }}
         workingDir: /app
         securityContext:
           runAsUser: 7000
@@ -46,7 +46,7 @@ spec:
           mountPath: /app/id_rsa
           subPath: id_rsa
           readOnly: false
-resources:
+        resources:
           requests:
             cpu: {{ pluck .Values.werf.env .Values.app.resources.requests.cpu | first | default .Values.app.resources.requests.cpu._default }}
             memory: {{ pluck .Values.werf.env .Values.app.resources.requests.memory | first | default .Values.app.resources.requests.memory._default }}
@@ -54,16 +54,16 @@ resources:
             memory: {{ pluck .Values.werf.env .Values.app.resources.limits.memory | first | default .Values.app.resources.limits.memory._default }}
         ports:
         - name: http
-          containerPort: 8080
+          containerPort: {{ pluck .Values.werf.env .Values.app.port | first | default .Values.app.port._default }}
           protocol: TCP
         readinessProbe:
           tcpSocket:
-            port: 8080
+            port: {{ pluck .Values.werf.env .Values.app.port | first | default .Values.app.port._default }}
           timeoutSeconds: 5
           initialDelaySeconds: 5
         livenessProbe:
           tcpSocket:
-            port: 8080
+            port: {{ pluck .Values.werf.env .Values.app.port | first | default .Values.app.port._default }}
           timeoutSeconds: 1
           initialDelaySeconds: 10
         env:
