@@ -19,18 +19,18 @@ data:
             apiKey: {{ pluck .Values.werf.env .Values.token.redmine | first | default .Values.token.redmine._default }}
             enabled: true
             trackers:
-              - id: 13 # Исправление/доработка
+              - id: 13
             statuses:
-              - id: 4 # Ожидает
+              - id: 4
                 needMerge: false
-              - id: 7 # Создан pull request
+              - id: 7
                 needMerge: true
-              - id: 9 # Требуется проверка
+              - id: 9
                 needMerge: true
             custom-fields:
-              - id: 1 # Pull Request back-end
-              - id: 4 # Pull Request front-end
-              - id: 19 # Pull Request erpi
+              - id: 1
+              - id: 4
+              - id: 19
           jira:
             host: {{ pluck .Values.werf.env .Values.bro.flow.task_trackers.jira.host | first | default .Values.bro.flow.task_trackers.jira.host._default }}
             username: {{ pluck .Values.werf.env .Values.bro.flow.task_trackers.jira.username | first | default .Values.bro.flow.task_trackers.jira.username._default }}
