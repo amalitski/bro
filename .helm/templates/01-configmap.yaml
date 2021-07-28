@@ -9,7 +9,7 @@ data:
     bro:
       flow:
         stage:
-          name: {{ .Values.global.ci_url }}
+          name: {{ .Values.global.env_url }}
           cronReceive: "0 */1 * * * ?"
           git:
             userEmail: {{ pluck .Values.werf.env .Values.bro.flow.stage.git.userEmail | first | default .Values.bro.flow.stage.git.userEmail._default }}
