@@ -85,7 +85,8 @@ public class MergeService {
             throw new Exception("Invalid configuration: bro.flow.stage.branchName or bro.flow.stage.pushCmd empty!");
         }
         var project = projectRepository.findByName(merge.getProjectName());
-        if (project.isPresent() && project.get().getBuildCheckSum().equals(merge.getCheckSum())) {
+        if (project.isPresent() && project.get().getBuildCheckSum() != null && project.get().getBuildCheckSum().equals(merge.getCheckSum())) {
+            log.trace("Push skipped. Project '{}', checksum equal {}", merge.getProjectName(), project.get().getBuildCheckSum());
             return;
         }
         var cmd = config.getStage().getPushCmd();
@@ -115,7 +116,10 @@ public class MergeService {
                 pr.getBranch().getCommits().forEach(c -> {
                     var repo = pr.getGitRepositoryClazz();
                     c.setCommitterAvatarUri(repo.getCommitterAvatarUri(c.getCommitterEmail()));
-                    var committer = Issue.Committer.builder().avatarUri(c.getCommitterAvatarUri()).build();
+                    var committer = Issue.Committer.builder()
+                            .avatarUri(c.getCommitterAvatarUri())
+                            .name(c.getCommitterName())
+                            .build();
                     committers.add(committer);
                 });
             }
@@ -218,8 +222,7 @@ public class MergeService {
                 continue;
             }
             branch.setCommits(getCommits(branch, dirRepo));
-            var msg = "Merge branch '" + branch.getBranchName() + "' into stage '" + config.getStage().getBranchName() + "'";
-            var resp = exec("git merge -m \"" + msg + "\" origin/" + branch.getBranchName(), dirRepo);
+            var resp = exec(getMergeCmd(branch), dirRepo);
             var success = resp.get("code").equals("0");
             branch.setStdout(resp.get("stdout"));
             branch.setStderr(resp.get("stderr"));
@@ -233,9 +236,14 @@ public class MergeService {
         return true;
     }
 
+    private String getMergeCmd(Merge.Branch branch){
+        return config.getStage().getMergeCmd()
+                .replace("{branchName}", branch.getBranchName());
+    }
+
     private List<Merge.Branch.Commit> getCommits(Merge.Branch branch, File dirRepo) throws IOException {
         var commits = new ArrayList<Merge.Branch.Commit>();
-        var cmdLog = MessageFormat.format("git log --pretty=format:\"%H|||%ce|||%ci|||%f\" origin/{1}..origin/{0}", branch.getBranchName(), branch.getTargetBranchName());
+        var cmdLog = MessageFormat.format("git log --pretty=format:\"%H|||%ce|||%cn|||%ci|||%s\" origin/{1}..origin/{0}", branch.getBranchName(), branch.getTargetBranchName());
         var respLog = exec(cmdLog, dirRepo);
         var data = respLog.get("stdout").trim();
         if (data.isEmpty()) {
@@ -243,12 +251,13 @@ public class MergeService {
         }
         Arrays.stream(data.split("\n")).forEach(row -> {
             var parts = row.trim().split(Pattern.quote("|||"));
-            if (parts.length > 3 && !parts[0].isEmpty() && !parts[1].isEmpty() && !parts[2].isEmpty()) {
+            if (parts.length >= 5 && !parts[0].isEmpty() && !parts[1].isEmpty() && !parts[2].isEmpty()) {
                 commits.add(Merge.Branch.Commit.builder()
                         .hash(parts[0].trim())
                         .committerEmail(parts[1].trim())
-                        .committerDate(parts[2].trim())
-                        .subject(parts[3].trim())
+                        .committerName(parts[2].trim())
+                        .committerDate(parts[3].trim())
+                        .subject(parts[4].trim())
                         .build());
             }
         });

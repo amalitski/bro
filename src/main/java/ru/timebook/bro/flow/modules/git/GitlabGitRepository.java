@@ -36,7 +36,7 @@ public class GitlabGitRepository implements GitRepository {
     }
 
     public void getPullRequestInfo(Issue.PullRequest pullRequest) {
-        if (pullRequest.getUri().isEmpty()) {
+        if (pullRequest.getUri().trim().length() <= 8) {
             return;
         }
         var api = getApi();
@@ -123,6 +123,7 @@ public class GitlabGitRepository implements GitRepository {
                     merge.getBranches().add(Merge.Branch.builder()
                             .branchName(pr.getSourceBranchName())
                             .targetBranchName(pr.getTargetBranchName())
+                            .merged(pr.getMerged())
                             .build());
                     map.remove(pr.getProjectName());
                 } else {

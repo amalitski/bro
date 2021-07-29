@@ -13,8 +13,6 @@
     <!-- App css -->
     <link href="assets/css/bootstrap-creative.min.css" rel="stylesheet" type="text/css" id="bs-default-stylesheet"/>
     <link href="assets/css/app-creative.min.css" rel="stylesheet" type="text/css" id="app-default-stylesheet"/>
-    <link href="assets/css/bootstrap-creative-dark.min.css" rel="stylesheet" type="text/css" id="bs-dark-stylesheet" disabled/>
-    <link href="assets/css/app-creative-dark.min.css" rel="stylesheet" type="text/css" id="app-dark-stylesheet" disabled/>
     <!-- icons -->
     <link href="assets/css/icons.min.css" rel="stylesheet" type="text/css"/>
 </head>
@@ -200,14 +198,14 @@
                                                         {{#branch}}
 
                                                         {{#merged}}
-                                                        <a href="{{uri}}" class="btn btn-xs btn-soft-warning">{{branchName}}</a>
+                                                        <a href="{{uri}}" class="btn btn-xs badge-outline-warning">{{branchName}}</a>
                                                         {{/merged}}
                                                         {{^merged}}
                                                             {{#mergeLocalSuccess}}
-                                                            <a href="{{uri}}" class="btn btn-xs btn-outline-success btn-rounded">{{branchName}}</a>
+                                                            <a href="{{uri}}" class="btn btn-xs badge-outline-success btn-rounded">{{branchName}}</a>
                                                             {{/mergeLocalSuccess}}
                                                             {{^mergeLocalSuccess}}
-                                                            <a href="{{uri}}" class="btn btn-xs btn-soft-danger">{{branchName}}</a>
+                                                            <a href="{{uri}}" class="btn btn-xs badge-outline-danger">{{branchName}}</a>
                                                             {{/mergeLocalSuccess}}
                                                         {{/merged}}
                                                         {{/branch}}
@@ -215,7 +213,7 @@
                                                     </div>
                                                     <div class="float-right">
                                                         {{#committers}}
-                                                        <a href="#" title="How cools this?!"><img src="{{avatarUri}}" alt="user-image" class="avatar-xs rounded-circle"/></a>
+                                                        <a href="#" title="{{name}}"><img src="{{avatarUri}}" alt="user-image" class="avatar-xs rounded-circle"/></a>
                                                         {{/committers}}
                                                     </div>
                                                 </div>

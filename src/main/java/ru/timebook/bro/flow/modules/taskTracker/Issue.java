@@ -51,6 +51,7 @@ public class Issue {
     public static class Committer {
         private String avatarUri;
         private String profileUri;
+        private String name;
     }
     
     @Data

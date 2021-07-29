@@ -11,8 +11,12 @@ This project provides an extendable Java application for creating development an
 # Local Development/Testing
 
 - Copy SSH private key (for git repo) to `.docker/git_key.private` 
-- Run docker-compose `docker-compose up -d`
+- Run `mvn spring-boot:run` or docker-compose `docker-compose up -d`
 
+
+# Health check
+
+`curl -v http://localhost:8080/bro/health/liveness`
 
 # Contributing
 
