@@ -36,7 +36,7 @@ public class GitlabGitRepository implements GitRepository {
     }
 
     public void getPullRequestInfo(Issue.PullRequest pullRequest) {
-        if (pullRequest.getUri().isEmpty()) {
+        if (pullRequest.getUri().trim().length() <= 8) {
             return;
         }
         var api = getApi();
