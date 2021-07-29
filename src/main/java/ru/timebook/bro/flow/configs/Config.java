@@ -23,6 +23,7 @@ public class Config {
         private String uri;
         private String branchName;
         private String pushCmd;
+        private String mergeCmd;
         private String cronReceive;
         private String basePath;
         private Git git;

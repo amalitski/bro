@@ -123,6 +123,7 @@ public class GitlabGitRepository implements GitRepository {
                     merge.getBranches().add(Merge.Branch.builder()
                             .branchName(pr.getSourceBranchName())
                             .targetBranchName(pr.getTargetBranchName())
+                            .merged(pr.getMerged())
                             .build());
                     map.remove(pr.getProjectName());
                 } else {
