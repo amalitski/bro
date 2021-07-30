@@ -22,6 +22,9 @@ app:
 java_opts:
   _default: "-Dhttps.protocols=TLSv1.2 -Xms64m -Xmx256m -Xss256k"
 
+git_ssh_command:
+  _default: "ssh -i $file -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+
 ingress_class:
   _default: nginx
 

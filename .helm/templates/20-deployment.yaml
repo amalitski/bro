@@ -40,7 +40,7 @@ spec:
           mountPath: /app/application.yml
           subPath: application.yml
         - name: id-rsa
-          mountPath: /app/id_rsa
+          mountPath: /app/git_key.private
           subPath: id_rsa
           readOnly: false
         resources:
