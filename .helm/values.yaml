@@ -3,7 +3,7 @@ app:
   port:
     _default: 8080
   replicas:
-    _default: 2
+    _default: 1
   resources:
     requests:
       cpu:
@@ -23,7 +23,7 @@ java_opts:
   _default: "-Dhttps.protocols=TLSv1.2 -Xms64m -Xmx256m -Xss256k"
 
 git_ssh_command:
-  _default: "ssh -i $file -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+  _default: "ssh -i /app/git_key.private -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
 
 ingress_class:
   _default: nginx

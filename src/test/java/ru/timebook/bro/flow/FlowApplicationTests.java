@@ -27,6 +27,7 @@ class FlowApplicationTests {
     private Config config;
 
     @Test
+    @Disabled
     void httpsTest() {
         Client client = ClientBuilder.newClient();
         WebTarget webTarget = client.target("https://ya.ru");
