@@ -82,7 +82,6 @@ data:
         property-naming-strategy: com.fasterxml.jackson.databind.PropertyNamingStrategy.SnakeCaseStrategy
       web:
         resources:
-          static-locations: file:src/main/resources/static/
           cache:
             cachecontrol:
               no-cache: true
