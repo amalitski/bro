@@ -49,7 +49,7 @@ Cleanup:
   stage: cleanup
   script:
     - *base_werf
-    - docker login -u nobody -p ${WERF_IMAGES_CLEANUP_PASSWORD} ${WERF_IMAGES_REPO}
+    - docker login -u nobody -p ${WERF_IMAGES_CLEANUP_PASSWORD} ${WERF_REPO}
     - werf cleanup
   only:
     - schedules
