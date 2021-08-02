@@ -5,15 +5,10 @@ metadata:
   name: {{ .Chart.Name }}
 spec:
   replicas: {{ pluck .Values.werf.env .Values.app.replicas | first | default .Values.app.replicas._default }}
+  serviceName: {{ .Chart.Name }}
   selector:
     matchLabels:
       app: {{ .Chart.Name }}
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 1
-      maxSurge: 1
-  minReadySeconds: 10
   template:
     metadata:
       labels:
