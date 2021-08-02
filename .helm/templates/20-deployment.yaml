@@ -77,7 +77,7 @@ spec:
           - ReadWriteOnce
         resources:
           requests:
-            storage: {{ pluck .Values.global.env .Values.app.requests.storage | first | default .Values.app.requests.storage._default }}
+            storage: {{ pluck .Values.global.env .Values.app.resources.requests.storage | first | default .Values.app.resources.requests.storage._default }}
 ---
 apiVersion: v1
 data:
