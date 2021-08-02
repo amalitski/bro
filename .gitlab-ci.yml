@@ -39,6 +39,9 @@ Deploy to Test:
   environment:
     name: test
     url: https://test-kube.timebook.ru
+  only:
+    refs:
+      - stages
   except:
     - schedules
   tags:
