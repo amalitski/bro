@@ -41,8 +41,6 @@ data:
             host: {{ pluck .Values.werf.env .Values.bro.flow.repositories.gitlab.host | first | default .Values.bro.flow.repositories.gitlab.host._default }}
             token: {{ pluck .Values.werf.env .Values.token.gitlab | first | default .Values.token.gitlab._default }}
             repositories:
-              - path: DEVOPS/bender
-                preMerge: master
               - path: timebook/timebook
                 preMerge: master
               - path: timebook/timebook.web-client
