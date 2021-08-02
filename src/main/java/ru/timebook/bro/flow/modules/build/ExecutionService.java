@@ -57,7 +57,10 @@ public class ExecutionService {
         taskTrackers.forEach((v) -> issues.addAll(v.getForMerge()));
         gitRepositories.forEach((v) -> v.getInfo(issues));
 
-        var merges = gitRepositories.stream().map(v -> v.getMerge(issues)).flatMap(Collection::stream).collect(Collectors.toList());
+        var merges = gitRepositories.stream()
+                .map(v -> v.getMerge(issues))
+                .flatMap(Collection::stream)
+                .collect(Collectors.toList());
         mergeService.merge(merges);
         mergeService.push(merges);
 
