@@ -1,0 +1,76 @@
+---
+app:
+  port:
+    _default: 8080
+  replicas:
+    _default: 1
+  resources:
+    requests:
+      cpu:
+        _default: 50m
+        production: 50m
+      memory:
+        _default: 1024Mi
+        rc: 512Mi
+        production: 512M
+      storage:
+        _default: 2G # Current at 10G
+    limits:
+      memory:
+        _default: 1024Mi
+        rc: 512Mi
+        production: 128G
+
+java_opts:
+  _default: "-Dhttps.protocols=TLSv1.2 -Xms64m -Xmx256m -Xss256k"
+
+git_ssh_command:
+  _default: "ssh -i /app/git_key.private -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+
+ingress_class:
+  _default: nginx
+
+debug:
+  _default: false
+
+bro:
+  flow:
+    stage:
+      git:
+        userEmail:
+          _default: "bender@corp.timebook.ru"
+    task_trackers:
+      redmine:
+        host:
+          _default: "https://redmine.timebook.ru"
+      jira:
+        host:
+          _default: "https://timebook-jira.atlassian.net"
+        username:
+          _default: "it@timebook.ru"
+    repositories:
+      gitlab:
+        host:
+          _default: "https://gitlab.timebook.cloud"
+
+logging:
+  _default: "trace"
+
+spring:
+  datasource:
+    url:
+      _default: "jdbc:h2:file:./temp/database/store"
+    username:
+      _default: "bender"
+    password:
+      _default: "bender"
+
+server:
+  tomcat:
+    threads:
+      max:
+        _default: 5
+      min_spare:
+        _default: 1
+    connection_timeout:
+      _default: 30
