@@ -43,6 +43,8 @@ spec:
           mountPath: /app/git_key.private
           subPath: id_rsa
           readOnly: false
+        - name: db
+          mountPath: /app/temp/
         resources:
           requests:
             cpu: {{ pluck .Values.werf.env .Values.app.resources.requests.cpu | first | default .Values.app.resources.requests.cpu._default }}
@@ -66,6 +68,16 @@ spec:
         env:
 {{- include "common_envs" . | indent 8 }}
         command: ["sh", "-c", "java $JAVA_OPTS -jar bro.jar"]
+  volumeClaimTemplates:
+    - metadata:
+        name: db
+      spec:
+        storageClassName: rbd
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ pluck .Values.global.env .Values.app.requests.storage | first | default .Values.app.requests.storage._default }}
 ---
 apiVersion: v1
 data:

@@ -13,6 +13,8 @@ app:
         _default: 1024Mi
         rc: 512Mi
         production: 512M
+      storage:
+        _default: 2G # Current at 10G
     limits:
       memory:
         _default: 1024Mi
