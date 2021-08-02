@@ -41,7 +41,7 @@ Deploy to Test:
     url: https://test-kube.timebook.ru
   only:
     refs:
-      - stages
+      - stages/test-kube.timebook.ru
   except:
     - schedules
   tags:
