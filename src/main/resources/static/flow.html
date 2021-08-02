@@ -13,6 +13,7 @@
     <!-- App css -->
     <link href="assets/css/bootstrap-creative.min.css" rel="stylesheet" type="text/css" id="bs-default-stylesheet"/>
     <link href="assets/css/app-creative.min.css" rel="stylesheet" type="text/css" id="app-default-stylesheet"/>
+    <link href="assets/css/main.css" rel="stylesheet" type="text/css"/>
     <!-- icons -->
     <link href="assets/css/icons.min.css" rel="stylesheet" type="text/css"/>
 </head>
@@ -99,7 +100,7 @@
                         </li>
 
                         <li class="nav-item">
-                            <a class="nav-link arrow-none" href="#" id="topnav-apps" role="button">
+                            <a class="nav-link arrow-none" href="{{path}}/flow#" id="topnav-apps" role="button">
                                 <i class="fe-activity mr-1"></i> Health
                             </a>
                         </li>
@@ -170,7 +171,7 @@
                                     </ul>
                                 </div>
                                 {{#data.issues}}
-                                <div class="card mb-1 shadow-none border">
+                                <div class="card mb-1 shadow-none border issue-box">
                                     <div class="p-2">
                                         <div class="row">
                                             <div class="col-auto">

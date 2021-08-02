@@ -1,0 +1,6 @@
+.issue-box img, .issue-box  a.btn {
+    filter: grayscale(0.7);
+}
+.issue-box img:hover, .issue-box  a.btn:hover {
+    filter: grayscale(0);
+}

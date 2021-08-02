@@ -103,8 +103,5 @@ public class ExecutionServiceIntegrationTest {
     @Test
     void gitlabAvatarUriRepoTest() {
         gitlabGitRepository.getCommitterAvatarUri("linus.torvalds@gmail.com");
-        gitlabGitRepository.getCommitterAvatarUri("linus.torvalds@gmail.com");
-        gitlabGitRepository.getCommitterAvatarUri("linus.torvalds@gmail.com");
-        gitlabGitRepository.getCommitterAvatarUri("linus.torvalds@gmail.com");
     }
 }
