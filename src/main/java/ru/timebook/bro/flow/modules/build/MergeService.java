@@ -6,6 +6,7 @@ import org.apache.commons.io.FileUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 import ru.timebook.bro.flow.configs.Config;
+import ru.timebook.bro.flow.modules.git.GitlabGitRepository;
 import ru.timebook.bro.flow.modules.taskTracker.Issue;
 import ru.timebook.bro.flow.modules.git.Merge;
 import ru.timebook.bro.flow.utils.DateTimeUtil;
@@ -25,10 +26,12 @@ import java.util.stream.Collectors;
 public class MergeService {
     private final Config config;
     private final ProjectRepository projectRepository;
+    private final GitlabGitRepository gitlabGitRepository;
 
-    public MergeService(Config config, ProjectRepository projectRepository) {
+    public MergeService(Config config, ProjectRepository projectRepository, GitlabGitRepository gitlabGitRepository) {
         this.config = config;
         this.projectRepository = projectRepository;
+        this.gitlabGitRepository = gitlabGitRepository;
     }
 
     public void merge(List<Merge> merges) {
@@ -56,7 +59,7 @@ public class MergeService {
                         .collect(Collectors.toList()));
             }
         });
-        dirsRemove.parallelStream().forEach(f -> {
+        dirsRemove.parallelStream().filter(Objects::nonNull).forEach(f -> {
             try {
                 FileUtils.deleteDirectory(f);
                 log.trace("Remove directory: {}", f.getAbsolutePath());
@@ -80,16 +83,23 @@ public class MergeService {
         });
     }
 
+    public void deployJob(List<Merge> merges) {
+        merges.stream().filter(m -> m.getPush().isPushed()).forEach(m -> {
+            var jobId = gitlabGitRepository.getJobId(m.getProjectName(), m.getLastCommitSha());
+            jobId.ifPresent(s -> m.getPush().setJob(Merge.Push.Job.builder().id(Integer.parseInt(s)).build()));
+        });
+    }
+
     private void pushExec(Merge merge) throws Exception {
         if (config.getStage().getBranchName().isEmpty() || config.getStage().getPushCmd().isEmpty()) {
             throw new Exception("Invalid configuration: bro.flow.stage.branchName or bro.flow.stage.pushCmd empty!");
         }
         var project = projectRepository.findByName(merge.getProjectName());
+        var cmd = config.getStage().getPushCmd();
         if (project.isPresent() && project.get().getBuildCheckSum() != null && project.get().getBuildCheckSum().equals(merge.getCheckSum())) {
-            log.trace("Push skipped. Project '{}', checksum equal {}", merge.getProjectName(), project.get().getBuildCheckSum());
+            log.trace("Push skipped. Project '{}', cmd: '{}', checksum equal {}", merge.getProjectName(), cmd, project.get().getBuildCheckSum());
             return;
         }
-        var cmd = config.getStage().getPushCmd();
         var resp = exec(cmd, merge.getDirRepo());
         merge.getPush().setLog(resp.get("stdout"));
         merge.getPush().setPushed(resp.get("code").equals("0"));

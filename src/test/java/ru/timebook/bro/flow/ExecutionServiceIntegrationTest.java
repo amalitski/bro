@@ -1,6 +1,9 @@
 package ru.timebook.bro.flow;
 
 import org.apache.commons.io.FileUtils;
+import org.gitlab4j.api.Constants;
+import org.gitlab4j.api.GitLabApiException;
+import org.gitlab4j.api.models.PipelineFilter;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -8,11 +11,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cache.CacheManager;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.util.Assert;
 import ru.timebook.bro.flow.configs.Config;
+import ru.timebook.bro.flow.modules.build.BuildHasProject;
+import ru.timebook.bro.flow.modules.build.BuildHasProjectRepository;
 import ru.timebook.bro.flow.modules.build.BuildRepository;
 import ru.timebook.bro.flow.modules.build.ExecutionService;
 import ru.timebook.bro.flow.modules.git.GitlabGitRepository;
+import ru.timebook.bro.flow.utils.JsonUtil;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
@@ -33,8 +40,6 @@ public class ExecutionServiceIntegrationTest {
     private ExecutionService executionService;
     @Autowired
     private GitlabGitRepository gitlabGitRepository;
-    @Autowired
-    private CacheManager cacheManager;
     @Autowired
     private Config config;
     @Autowired
@@ -102,9 +107,6 @@ public class ExecutionServiceIntegrationTest {
 
     @Test
     void gitlabAvatarUriRepoTest() {
-        gitlabGitRepository.getCommitterAvatarUri("linus.torvalds@gmail.com");
-        gitlabGitRepository.getCommitterAvatarUri("linus.torvalds@gmail.com");
-        gitlabGitRepository.getCommitterAvatarUri("linus.torvalds@gmail.com");
         gitlabGitRepository.getCommitterAvatarUri("linus.torvalds@gmail.com");
     }
 }

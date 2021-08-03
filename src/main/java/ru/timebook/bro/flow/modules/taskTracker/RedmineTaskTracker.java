@@ -14,9 +14,7 @@ import ru.timebook.bro.flow.utils.GravatarUtil;
 
 import java.time.Duration;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -64,6 +62,7 @@ public class RedmineTaskTracker implements TaskTracker {
         } catch (RedmineException e) {
             log.error("Redmine error", e);
         }
+        listIssues.sort(Comparator.comparing(Issue::getId).reversed());
         log.debug("Issues for merge: {}", listIssues.size());
         return listIssues;
     }
@@ -77,7 +76,7 @@ public class RedmineTaskTracker implements TaskTracker {
         var params = new HashMap<String, String>();
         params.put("status_id", statusId);
         params.put("tracker_id", trackerId);
-        params.put("sort", "updated_on:desc");
+        params.put("sort", "id:desc");
 
         var customFieldsIds = getCustomFieldsIds();
         var duration = Duration.parse(config.getAfterUpdateTime());

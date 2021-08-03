@@ -3,6 +3,7 @@ package ru.timebook.bro.flow.modules.build;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import ru.timebook.bro.flow.modules.git.Merge;
 import ru.timebook.bro.flow.utils.DateTimeUtil;
@@ -89,7 +90,8 @@ public class FlowService {
             return null;
         }).collect(Collectors.toList());
         var lastBuild = getBuild(b.get());
-        var builds = buildRepository.findFirst5ByOrderByStartAtDesc().stream().map(this::getBuild).collect(Collectors.toList());
+        var builds = buildRepository.findAllByOrderByStartAtDescAndPushed(PageRequest.of(0, 5)).stream()
+                .map(this::getBuild).collect(Collectors.toList());
         var i = JsonUtil.deserialize(b.get().getIssuesJson(), Issue[].class);
         return Response.builder()
                 .issues(Arrays.stream(i).toList())

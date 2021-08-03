@@ -60,9 +60,9 @@ public class ExecutionService {
         var merges = gitRepositories.stream().map(v -> v.getMerge(issues)).flatMap(Collection::stream).collect(Collectors.toList());
         mergeService.merge(merges);
         mergeService.push(merges);
-
         issues.forEach(i -> i.getPullRequests().forEach(pr -> MergeService.getBranchByPr(pr, merges).ifPresent(pr::setBranch)));
         issues.forEach(MergeService::updateCommitters);
+        mergeService.deployJob(merges);
         createBuild(issues, merges);
         mergeService.clean();
         log.debug("Complete: {}", timer.stop());
@@ -76,7 +76,13 @@ public class ExecutionService {
                     .orElse(Project.builder().name(m.getProjectName()).build());
             p.setBuildCheckSum(m.getCheckSum());
             p = projectRepository.save(p);
-            return BuildHasProject.builder().project(p).build(b).mergesJson(JsonUtil.serialize(m)).mergeCheckSum(m.getCheckSum()).lastCommitSha(m.getLastCommitSha()).build();
+            return BuildHasProject.builder()
+                    .project(p)
+                    .build(b)
+                    .mergesJson(JsonUtil.serialize(m))
+                    .mergeCheckSum(m.getCheckSum())
+                    .lastCommitSha(m.getLastCommitSha())
+                    .pushed(m.getPush().isPushed()).build();
         }).filter(Objects::nonNull).collect(Collectors.toList());
         buildHasProjectRepository.saveAll(buildHasProjects);
         log.trace("Build saved. Id: {}, buildHasProjects.size(): {}", b.getId(), buildHasProjects.size());

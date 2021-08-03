@@ -39,6 +39,15 @@ public class Merge {
     public static class Push {
         private boolean pushed;
         private String log;
+        private Job job;
+
+        @Data
+        @Builder
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class Job {
+            private int id;
+        }
     }
 
     @Data

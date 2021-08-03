@@ -3,7 +3,9 @@ package ru.timebook.bro.flow.modules.git;
 import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 import org.gitlab4j.api.GitLabApi;
+import org.gitlab4j.api.GitLabApiException;
 import org.gitlab4j.api.ProxyClientConfig;
+import org.gitlab4j.api.models.PipelineFilter;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 import org.springframework.web.client.RestTemplate;
@@ -11,6 +13,7 @@ import ru.timebook.bro.flow.configs.Config;
 import ru.timebook.bro.flow.modules.taskTracker.Issue;
 import ru.timebook.bro.flow.utils.BufferUtil;
 
+import javax.swing.text.html.Option;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -21,10 +24,12 @@ import java.util.stream.Collectors;
 @Service
 public class GitlabGitRepository implements GitRepository {
     private final Config.Repositories.Gitlab config;
+    private final Config.Stage configStage;
     private GitLabApi gitLabApi;
 
     public GitlabGitRepository(Config config) {
         this.config = config.getRepositories().getGitlab();
+        this.configStage = config.getStage();
     }
 
     @Override
@@ -57,7 +62,7 @@ public class GitlabGitRepository implements GitRepository {
         }
     }
 
-    private GitLabApi getApi() {
+    public GitLabApi getApi() {
         if (gitLabApi == null) {
             if (!config.getProxy().isEmpty()) {
                 Map<String, Object> proxyConfig = ProxyClientConfig.createProxyClientConfig(config.getProxy());
@@ -127,29 +132,61 @@ public class GitlabGitRepository implements GitRepository {
                             .build());
                     map.remove(pr.getProjectName());
                 } else {
-                    var branches = new LinkedHashSet<String>();
-                    var rep = getPreMergeBranch(pr.getProjectName());
-                    rep.ifPresent(repository -> branches.addAll(repository.getPreMerge()));
-                    branches.add(pr.getSourceBranchName());
-                    merge = Merge.builder()
-                            .branches(branches.stream().map(v -> Merge.Branch.builder()
-                                    .branchName(v)
-                                    .targetBranchName(pr.getTargetBranchName())
-                                    .merged(pr.getMerged()).build()).collect(Collectors.toList()))
-                            .projectId(DigestUtils.md5DigestAsHex(pr.getProjectName().getBytes(StandardCharsets.UTF_8)))
-                            .projectName(pr.getProjectName())
-                            .projectSafeName(pr.getProjectName().replaceAll("[^A-Za-z0-9\\-_.]", "."))
-                            .projectShortName(pr.getProjectName().substring(0,1).toUpperCase())
-                            .httpUrlRepo(pr.getHttpUrlRepo())
-                            .sshUrlRepo(pr.getSshUrlRepo())
-                            .push(Merge.Push.builder().build())
-                            .build();
+                    merge = getMergeByPr(pr);
                 }
                 map.put(pr.getProjectName(), merge);
             }
         }
-        log.debug("Merge count: {}", map.size());
-        return new ArrayList<>(map.values());
+        var maps = new ArrayList<>(map.values());
+        config.getRepositories().forEach(r -> {
+            if (maps.stream().noneMatch(m -> m.getProjectName().equals(r.getPath()))) {
+                maps.add(getMergeByRepo(r));
+            }
+        });
+        log.debug("Merge count: {}", maps.size());
+        return maps;
+    }
+
+    private Merge getMergeByPr(Issue.PullRequest pr){
+        var branches = new LinkedHashSet<String>();
+        var rep = getPreMergeBranch(pr.getProjectName());
+        rep.ifPresent(repository -> branches.addAll(repository.getPreMerge()));
+        branches.add(pr.getSourceBranchName());
+        return Merge.builder()
+                .branches(branches.stream().map(v -> Merge.Branch.builder()
+                        .branchName(v)
+                        .targetBranchName(pr.getTargetBranchName())
+                        .merged(pr.getMerged()).build()).collect(Collectors.toList()))
+                .projectId(DigestUtils.md5DigestAsHex(pr.getProjectName().getBytes(StandardCharsets.UTF_8)))
+                .projectName(pr.getProjectName())
+                .projectSafeName(pr.getProjectName().replaceAll("[^A-Za-z0-9\\-_.]", "."))
+                .projectShortName(pr.getProjectName().substring(0,1).toUpperCase())
+                .httpUrlRepo(pr.getHttpUrlRepo())
+                .sshUrlRepo(pr.getSshUrlRepo())
+                .push(Merge.Push.builder().build())
+                .build();
+    }
+
+    private Merge getMergeByRepo(Config.Repositories.Gitlab.Repository repo){
+        var merge = Merge.builder();
+        try {
+            var project = getApi().getProjectApi().getProject(repo.getPath());
+            merge
+                    .branches(repo.getPreMerge().stream().map(v -> Merge.Branch.builder()
+                            .branchName(v)
+                            .targetBranchName(v)
+                            .merged(true).build()).collect(Collectors.toList()))
+                    .projectId(DigestUtils.md5DigestAsHex(repo.getPath().getBytes(StandardCharsets.UTF_8)))
+                    .projectName(repo.getPath())
+                    .projectSafeName(repo.getPath().replaceAll("[^A-Za-z0-9\\-_.]", "."))
+                    .projectShortName(repo.getPath().substring(0,1).toUpperCase())
+                    .httpUrlRepo(project.getHttpUrlToRepo())
+                    .sshUrlRepo(project.getSshUrlToRepo())
+                    .push(Merge.Push.builder().build());
+        } catch (Exception e) {
+            log.error("Catch exception", e);
+        }
+        return merge.build();
     }
 
     private Optional<Config.Repositories.Gitlab.Repository> getPreMergeBranch(String projectName) {
@@ -157,6 +194,29 @@ public class GitlabGitRepository implements GitRepository {
             return Optional.empty();
         }
         return config.getRepositories().stream().filter(r -> r.getPath().equals(projectName)).findFirst();
+    }
+
+    public Optional<String> getJobId(String projectName, String sha) {
+        var api = getApi();
+        var p = new PipelineFilter();
+        p.setSha(sha);
+        try {
+            return api.getPipelineApi().getPipelines(projectName, p).stream().map(pp -> {
+                try {
+                    var job = api.getJobApi().getJobsForPipeline(projectName, pp.getId()).stream()
+                            .filter(jj -> jj.getName().equals(configStage.getDeploy().getJobName())).findFirst();
+                    if (job.isPresent()) {
+                        return job.get().getId().toString();
+                    }
+                } catch (GitLabApiException e) {
+                    log.error("Find job for deploy to stage return Exception", e);
+                }
+                return null;
+            }).filter(Objects::nonNull).findFirst();
+        } catch (GitLabApiException e) {
+            log.error("Find job for deploy to stage return Exception", e);
+        }
+        return Optional.empty();
     }
 }
 
