@@ -3,7 +3,9 @@ package ru.timebook.bro.flow.modules.git;
 import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 import org.gitlab4j.api.GitLabApi;
+import org.gitlab4j.api.GitLabApiException;
 import org.gitlab4j.api.ProxyClientConfig;
+import org.gitlab4j.api.models.PipelineFilter;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 import org.springframework.web.client.RestTemplate;
@@ -11,6 +13,7 @@ import ru.timebook.bro.flow.configs.Config;
 import ru.timebook.bro.flow.modules.taskTracker.Issue;
 import ru.timebook.bro.flow.utils.BufferUtil;
 
+import javax.swing.text.html.Option;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -57,7 +60,7 @@ public class GitlabGitRepository implements GitRepository {
         }
     }
 
-    private GitLabApi getApi() {
+    public GitLabApi getApi() {
         if (gitLabApi == null) {
             if (!config.getProxy().isEmpty()) {
                 Map<String, Object> proxyConfig = ProxyClientConfig.createProxyClientConfig(config.getProxy());
@@ -189,6 +192,30 @@ public class GitlabGitRepository implements GitRepository {
             return Optional.empty();
         }
         return config.getRepositories().stream().filter(r -> r.getPath().equals(projectName)).findFirst();
+    }
+
+    public Optional<String> getJobId(String projectName, String sha) {
+        var api = getApi();
+        var p = new PipelineFilter();
+        var deployName = "Deploy to Test";
+        p.setSha(sha);
+        try {
+            return api.getPipelineApi().getPipelines(projectName, p).stream().map(pp -> {
+                try {
+                    var job = api.getJobApi().getJobsForPipeline(projectName, pp.getId()).stream()
+                            .filter(jj -> jj.getName().equals(deployName)).findFirst();
+                    if (job.isPresent()) {
+                        return job.get().getId().toString();
+                    }
+                } catch (GitLabApiException e) {
+                    log.error("Find job for deploy to stage return Exception", e);
+                }
+                return null;
+            }).filter(Objects::nonNull).findFirst();
+        } catch (GitLabApiException e) {
+            log.error("Find job for deploy to stage return Exception", e);
+        }
+        return Optional.empty();
     }
 }
 
