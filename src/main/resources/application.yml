@@ -9,6 +9,8 @@ bro:
       mergeCmd: git merge -m "Merge branch '{branchName}' into stage '${bro.flow.stage.branchName}'" origin/{branchName} --no-ff
       cronReceive: "0 */10 * * * ?"
       basePath: /bro
+      deploy:
+        jobName: Deploy to Test
       git:
         userName: Bender Rodriguez
         userEmail: bender@company.com

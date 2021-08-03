@@ -28,6 +28,12 @@ public class Config {
         private String basePath;
         private Git git;
         private Temp temp;
+        private Deploy deploy;
+
+        @Data
+        public static class Deploy {
+            private String jobName;
+        }
 
         @Data
         public static class Temp {
