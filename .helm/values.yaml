@@ -14,7 +14,7 @@ app:
         rc: 512Mi
         production: 512M
       storage:
-        _default: 2G # Current at 10G
+        _default: 2G
     limits:
       memory:
         _default: 1024Mi
@@ -36,6 +36,9 @@ debug:
 bro:
   flow:
     stage:
+      deploy:
+        jobName:
+          _default: "Deploy to Test"
       git:
         userEmail:
           _default: "bender@corp.timebook.ru"
@@ -55,15 +58,6 @@ bro:
 
 logging:
   _default: "trace"
-
-spring:
-  datasource:
-    url:
-      _default: "jdbc:h2:file:./temp/database/store"
-    username:
-      _default: "bender"
-    password:
-      _default: "bender"
 
 server:
   tomcat:

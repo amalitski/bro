@@ -11,6 +11,8 @@ data:
         stage:
           name: {{ .Values.env_url }}
           cronReceive: "0 */1 * * * ?"
+          deploy:
+            jobName: {{ pluck .Values.werf.env .Values.bro.flow.stage.deploy.jobName | first | default .Values.bro.flow.stage.deploy.jobName._default }}
           git:
             userEmail: {{ pluck .Values.werf.env .Values.bro.flow.stage.git.userEmail | first | default .Values.bro.flow.stage.git.userEmail._default }}
         task-trackers:
@@ -68,10 +70,10 @@ data:
       main:
         banner-mode: off
       datasource:
-        url: {{ pluck .Values.werf.env .Values.spring.datasource.url | first | default .Values.spring.datasource.url._default }}
+        url: jdbc:h2:file:./temp/database/store
         driver-class-name: org.h2.Driver
-        username: {{ pluck .Values.werf.env .Values.spring.datasource.username | first | default .Values.spring.datasource.username._default }}
-        password: {{ pluck .Values.werf.env .Values.spring.datasource.password | first | default .Values.spring.datasource.password._default }}
+        username: bender
+        password: bender
       jpa:
         database-platform: org.hibernate.dialect.H2Dialect
         hibernate:

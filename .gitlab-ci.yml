@@ -1,6 +1,7 @@
 ---
 variables:
   WERF_VERSION: "1.2 ea"
+  DEBIAN_FRONTEND: noninteractive
 
 .base_werf: &base_werf
   - set -x

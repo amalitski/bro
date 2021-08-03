@@ -1,3 +1,5 @@
+{{ $_ := set . "TZDATA_VERSION" "2021a-3" }}
+
 project: bro
 configVersion: 1
 ---
@@ -14,6 +16,18 @@ git:
       install:
       - 'src/**/*'
       - 'pom.xml'
+ansible:
+  beforeInstall:
+  - name: Download tzdata.deb
+    get_url:
+      url: https://gitlab.timebook.cloud/api/v4/projects/216/jobs/artifacts/{{ .TZDATA_VERSION }}/raw/tzdata_{{ .TZDATA_VERSION }}_all.deb?job=build
+      dest: /var/tzdata.deb
+      mode: '0444'
+      headers:
+        PRIVATE-TOKEN: {{ env "TZDATA_TOKEN" }}
+  - name: Install tzdata
+    shell: |
+      dpkg -i /var/tzdata.deb
 shell:
   install:
     - cd /app
