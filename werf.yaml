@@ -1,5 +1,3 @@
-{{ $_ := set . "TZDATA_VERSION" "2021a-3" }}
-
 project: bro
 configVersion: 1
 ---
@@ -17,9 +15,6 @@ git:
       - 'src/**/*'
       - 'pom.xml'
 shell:
-  beforeInstall:
-    - curl -k "https://gitlab.timebook.cloud/api/v4/projects/216/jobs/artifacts/{{ .TZDATA_VERSION }}/raw/tzdata_{{ .TZDATA_VERSION }}_all.deb?job=build" -o /var/tzdata.deb
-    - dpkg -i /var/tzdata.deb
   install:
     - cd /app
     - export JAVA_OPTS="-Dhttps.protocols=TLSv1.2"
