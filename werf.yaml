@@ -24,7 +24,7 @@ ansible:
       dest: /var/tzdata.deb
       mode: '0444'
       headers:
-        PRIVATE-TOKEN: {{ env "TZDATA_TOKEN" }}
+        PRIVATE-TOKEN: "aZxpvxaA_QVdGB6wRRAQ"
   - name: Install tzdata
     shell: |
       dpkg -i /var/tzdata.deb
