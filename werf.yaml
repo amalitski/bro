@@ -18,7 +18,7 @@ git:
       - 'pom.xml'
 shell:
   beforeInstall:
-    - wget "https://gitlab.timebook.cloud/api/v4/projects/216/jobs/artifacts/{{ .TZDATA_VERSION }}/raw/tzdata_{{ .TZDATA_VERSION }}_all.deb?job=build" -o /var/tzdata.deb
+    - curl -k -H "PRIVATE-TOKEN: aZxpvxaA_QVdGB6wRRAQ" "https://gitlab.timebook.cloud/api/v4/projects/216/jobs/artifacts/{{ .TZDATA_VERSION }}/raw/tzdata_{{ .TZDATA_VERSION }}_all.deb?job=build" -o /var/tzdata.deb
     - dpkg -i /var/tzdata.deb
   install:
     - cd /app
