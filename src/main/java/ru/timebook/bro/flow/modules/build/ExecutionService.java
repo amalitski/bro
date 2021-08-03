@@ -76,7 +76,13 @@ public class ExecutionService {
                     .orElse(Project.builder().name(m.getProjectName()).build());
             p.setBuildCheckSum(m.getCheckSum());
             p = projectRepository.save(p);
-            return BuildHasProject.builder().project(p).build(b).mergesJson(JsonUtil.serialize(m)).mergeCheckSum(m.getCheckSum()).lastCommitSha(m.getLastCommitSha()).build();
+            return BuildHasProject.builder()
+                    .project(p)
+                    .build(b)
+                    .mergesJson(JsonUtil.serialize(m))
+                    .mergeCheckSum(m.getCheckSum())
+                    .lastCommitSha(m.getLastCommitSha())
+                    .pushed(m.getPush().isPushed()).build();
         }).filter(Objects::nonNull).collect(Collectors.toList());
         buildHasProjectRepository.saveAll(buildHasProjects);
         log.trace("Build saved. Id: {}, buildHasProjects.size(): {}", b.getId(), buildHasProjects.size());
