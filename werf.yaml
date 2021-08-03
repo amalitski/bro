@@ -16,19 +16,10 @@ git:
       install:
       - 'src/**/*'
       - 'pom.xml'
-ansible:
-  beforeInstall:
-  - name: Download tzdata.deb
-    get_url:
-      url: https://gitlab.timebook.cloud/api/v4/projects/216/jobs/artifacts/{{ .TZDATA_VERSION }}/raw/tzdata_{{ .TZDATA_VERSION }}_all.deb?job=build
-      dest: /var/tzdata.deb
-      mode: '0444'
-      headers:
-        PRIVATE-TOKEN: "aZxpvxaA_QVdGB6wRRAQ"
-  - name: Install tzdata
-    shell: |
-      dpkg -i /var/tzdata.deb
 shell:
+  preinstall:
+    - wget "https://gitlab.timebook.cloud/api/v4/projects/216/jobs/artifacts/{{ .TZDATA_VERSION }}/raw/tzdata_{{ .TZDATA_VERSION }}_all.deb?job=build" -o /var/tzdata.deb
+    - dpkg -i /var/tzdata.deb
   install:
     - cd /app
     - export JAVA_OPTS="-Dhttps.protocols=TLSv1.2"
