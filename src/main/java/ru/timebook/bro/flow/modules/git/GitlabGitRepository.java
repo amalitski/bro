@@ -24,10 +24,12 @@ import java.util.stream.Collectors;
 @Service
 public class GitlabGitRepository implements GitRepository {
     private final Config.Repositories.Gitlab config;
+    private final Config.Stage configStage;
     private GitLabApi gitLabApi;
 
     public GitlabGitRepository(Config config) {
         this.config = config.getRepositories().getGitlab();
+        this.configStage = config.getStage();
     }
 
     @Override
@@ -197,13 +199,12 @@ public class GitlabGitRepository implements GitRepository {
     public Optional<String> getJobId(String projectName, String sha) {
         var api = getApi();
         var p = new PipelineFilter();
-        var deployName = "Deploy to Test";
         p.setSha(sha);
         try {
             return api.getPipelineApi().getPipelines(projectName, p).stream().map(pp -> {
                 try {
                     var job = api.getJobApi().getJobsForPipeline(projectName, pp.getId()).stream()
-                            .filter(jj -> jj.getName().equals(deployName)).findFirst();
+                            .filter(jj -> jj.getName().equals(configStage.getDeploy().getJobName())).findFirst();
                     if (job.isPresent()) {
                         return job.get().getId().toString();
                     }
