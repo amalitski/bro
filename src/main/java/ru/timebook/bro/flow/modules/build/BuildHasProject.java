@@ -32,6 +32,9 @@ public class BuildHasProject {
     @Column
     private String lastCommitSha;
 
+    @Column
+    private boolean pushed;
+
     @Lob
     @Column(nullable = true)
     private String mergesJson;
