@@ -43,7 +43,7 @@ bro:
         username: USERNAME
         apiToken: API_TOKEN
         issues:
-          mergeJQL: "'Stage[Select List (multiple choices)]'=${bro.flow.stage.name} AND IN ('In Progress')"
+          mergeJQL: "'Stage[Select List (multiple choices)]'=${bro.flow.stage.name} AND statusCategory IN ('In Progress')"
           labelDeployed: deployed
         enabled: true
     repositories:
