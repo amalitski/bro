@@ -1,6 +1,9 @@
 package ru.timebook.bro.flow;
 
 import org.apache.commons.io.FileUtils;
+import org.gitlab4j.api.Constants;
+import org.gitlab4j.api.GitLabApiException;
+import org.gitlab4j.api.models.PipelineFilter;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -16,6 +19,7 @@ import ru.timebook.bro.flow.modules.build.BuildHasProjectRepository;
 import ru.timebook.bro.flow.modules.build.BuildRepository;
 import ru.timebook.bro.flow.modules.build.ExecutionService;
 import ru.timebook.bro.flow.modules.git.GitlabGitRepository;
+import ru.timebook.bro.flow.utils.JsonUtil;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
