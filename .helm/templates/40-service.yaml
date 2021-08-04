@@ -4,11 +4,11 @@ kind: Service
 metadata:
   name: {{ .Chart.Name }}
   labels:
-    app: "{{ .Chart.Name }}"
+    app: {{ .Chart.Name }}
 spec:
   type: ClusterIP
   selector:
-    app: "{{ .Chart.Name }}"
+    app: {{ .Chart.Name }}
   ports:
   - port: {{ pluck .Values.werf.env .Values.app.port | first | default .Values.app.port._default }}
     targetPort: {{ pluck .Values.werf.env .Values.app.port | first | default .Values.app.port._default }}
