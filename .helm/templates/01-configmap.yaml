@@ -65,38 +65,3 @@ data:
         console: "%d{yyyy-MM-dd HH:mm:ss} %clr(${LOG_LEVEL_PATTERN:%5p}) %msg%n"
       level:
         ru.timebook.bro.*: {{ pluck .Values.werf.env .Values.logging | first | default .Values.logging._default }}
-
-    spring:
-      main:
-        banner-mode: off
-      datasource:
-        url: jdbc:h2:file:./temp/database/store
-        driver-class-name: org.h2.Driver
-        username: bender
-        password: bender
-      jpa:
-        database-platform: org.hibernate.dialect.H2Dialect
-        hibernate:
-          ddl-auto: update
-      jackson:
-        property-naming-strategy: com.fasterxml.jackson.databind.PropertyNamingStrategy.SnakeCaseStrategy
-      web:
-        resources:
-          cache:
-            cachecontrol:
-              no-cache: true
-      mustache:
-        suffix: .html
-        prefix: classpath:/static/
-      groovy:
-        template:
-          check-template-location: false
-
-    server:
-      tomcat:
-        threads:
-          max: {{ pluck .Values.werf.env .Values.server.tomcat.threads.max | first | default .Values.server.tomcat.threads.max._default }}
-          min-spare: {{ pluck .Values.werf.env .Values.server.tomcat.threads.min_spare | first | default .Values.server.tomcat.threads.min_spare._default }}
-        connection-timeout: {{ pluck .Values.werf.env .Values.server.tomcat.connection_timeout | first | default .Values.server.tomcat.connection_timeout._default }}
-      servlet:
-        context-path: ${bro.flow.stage.basePath}
