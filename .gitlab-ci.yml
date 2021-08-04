@@ -1,31 +1,59 @@
 ---
+variables:
+  WERF_VERSION: "1.2 ea"
+
+.base_werf: &base_werf
+  - set -x
+  - type multiwerf && . $(multiwerf use ${WERF_VERSION} --as-file)
+  - type werf && source $(werf ci-env gitlab --as-file --verbose)
+
+.base_deploy: &base_deploy
+  stage: deploy
+  script:
+    - *base_werf
+    - werf converge --skip-build --set "env_url=$(echo ${CI_ENVIRONMENT_URL} | cut -d / -f 3)"
+      --namespace ${CI_ENVIRONMENT_SLUG}
+  dependencies:
+    - Build
+  tags:
+    - werf
+
 stages:
-  - test
+  - build
+  - deploy
+  - cleanup
 
-Unit:
-  image: docker/compose:1.29.1
-  stage: test
+Build:
+  stage: build
   script:
-    - docker-compose build --parallel --compress
-    - docker-compose run --rm --entrypoint="mvn -s /usr/share/maven/ref/settings-docker.xml clean test" app
-  after_script:
-    - docker-compose stop -t 1 && docker-compose rm -f
-  allow_failure: true
+    - *base_werf
+    - werf build
   except:
     - schedules
   tags:
-    - docker-build
+    - werf
 
-SAST:
-  image: docker/compose:1.29.1
-  stage: test
-  script:
-    - docker-compose build --parallel --compress
-    - docker-compose run --rm --entrypoint="mvn -s /usr/share/maven/ref/settings-docker.xml clean compile spotbugs:check" app
-  after_script:
-    - docker-compose stop -t 1 && docker-compose rm -f
-  allow_failure: true
+Deploy to Test:
+  <<: *base_deploy
+  stage: deploy
+  environment:
+    name: test
+    url: https://test-kube.timebook.ru
+  only:
+    refs:
+      - stages/test-kube.timebook.ru
   except:
     - schedules
   tags:
-    - docker-build
+    - werf
+
+Cleanup:
+  stage: cleanup
+  script:
+    - *base_werf
+    - docker login -u nobody -p ${WERF_IMAGES_CLEANUP_PASSWORD} ${WERF_REPO}
+    - werf cleanup
+  only:
+    - schedules
+  tags:
+    - werf

@@ -1,0 +1,83 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Chart.Name }}
+spec:
+  replicas: {{ pluck .Values.werf.env .Values.app.replicas | first | default .Values.app.replicas._default }}
+  serviceName: {{ .Chart.Name }}
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/01-configmap.yaml") . | sha256sum }}
+    spec:
+      imagePullSecrets:
+      - name: registrysecret
+      volumes:
+        - name: configs
+          configMap:
+            name: {{ .Chart.Name }}-config
+        - name: id-rsa
+          secret:
+            defaultMode: 0600
+            secretName: id-rsa
+      containers:
+      - name: {{ .Chart.Name }}
+        image: {{ first (pluck .Chart.Name .Values.werf.image) }}
+        workingDir: /app
+        volumeMounts:
+        - name: configs
+          mountPath: /app/application.yml
+          subPath: application.yml
+        - name: id-rsa
+          mountPath: /app/git_key.private
+          subPath: id_rsa
+          readOnly: false
+        - name: db
+          mountPath: /app/temp/
+        resources:
+          requests:
+            cpu: {{ pluck .Values.werf.env .Values.app.resources.requests.cpu | first | default .Values.app.resources.requests.cpu._default }}
+            memory: {{ pluck .Values.werf.env .Values.app.resources.requests.memory | first | default .Values.app.resources.requests.memory._default }}
+          limits:
+            memory: {{ pluck .Values.werf.env .Values.app.resources.limits.memory | first | default .Values.app.resources.limits.memory._default }}
+        ports:
+        - name: http
+          containerPort: {{ pluck .Values.werf.env .Values.app.port | first | default .Values.app.port._default }}
+          protocol: TCP
+        readinessProbe:
+          tcpSocket:
+            port: {{ pluck .Values.werf.env .Values.app.port | first | default .Values.app.port._default }}
+          timeoutSeconds: 5
+          initialDelaySeconds: 5
+        livenessProbe:
+          tcpSocket:
+            port: {{ pluck .Values.werf.env .Values.app.port | first | default .Values.app.port._default }}
+          timeoutSeconds: 1
+          initialDelaySeconds: 10
+        env:
+{{- include "common_envs" . | indent 8 }}
+        command: ["sh", "-c", "java $JAVA_OPTS -jar bro.jar"]
+  volumeClaimTemplates:
+    - metadata:
+        name: db
+      spec:
+        storageClassName: rbd
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ pluck .Values.global.env .Values.app.resources.requests.storage | first | default .Values.app.resources.requests.storage._default }}
+---
+apiVersion: v1
+data:
+  id_rsa: {{ werf_secret_file "id_rsa" | b64enc }}
+kind: Secret
+metadata:
+  name: id-rsa
+type: Opaque

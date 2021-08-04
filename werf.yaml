@@ -1,0 +1,35 @@
+project: bro
+configVersion: 1
+---
+artifact: build
+from: maven:3.8-openjdk-16
+git:
+  - add: /
+    to: /app
+    excludePaths:
+      - .gitlab-ci.yml
+      - .helm
+      - werf.yaml
+    stageDependencies:
+      install:
+      - 'src/**/*'
+      - 'pom.xml'
+shell:
+  install:
+    - cd /app
+    - export JAVA_OPTS="-Dhttps.protocols=TLSv1.2"
+    - export MAVEN_OPTS="-Dhttps.protocols=TLSv1.2"
+    - mvn -U clean package
+---
+image: bro
+from: maven:3.8-openjdk-16
+import:
+  - artifact: build
+    after: install
+    add: /app/target/bro.jar
+    to: /app/bro.jar
+docker:
+  WORKDIR: /app
+shell:
+  install:
+    - mkdir /app

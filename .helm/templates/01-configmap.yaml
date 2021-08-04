@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Chart.Name }}-config
+data:
+  application.yml: |
+    debug: {{ pluck .Values.werf.env .Values.debug | first | default .Values.debug._default }}
+
+    bro:
+      flow:
+        stage:
+          name: {{ .Values.env_url }}
+          cronReceive: "0 */1 * * * ?"
+          deploy:
+            jobName: {{ pluck .Values.werf.env .Values.bro.flow.stage.deploy.jobName | first | default .Values.bro.flow.stage.deploy.jobName._default }}
+          git:
+            userEmail: {{ pluck .Values.werf.env .Values.bro.flow.stage.git.userEmail | first | default .Values.bro.flow.stage.git.userEmail._default }}
+        task-trackers:
+          redmine:
+            host: {{ pluck .Values.werf.env .Values.bro.flow.task_trackers.redmine.host | first | default .Values.bro.flow.task_trackers.redmine.host._default }}
+            apiKey: {{ pluck .Values.werf.env .Values.token.redmine | first | default .Values.token.redmine._default }}
+            enabled: true
+            trackers:
+              - id: 13
+            statuses:
+              - id: 4
+                needMerge: false
+              - id: 7
+                needMerge: true
+              - id: 9
+                needMerge: true
+            custom-fields:
+              - id: 1
+              - id: 4
+              - id: 19
+          jira:
+            host: {{ pluck .Values.werf.env .Values.bro.flow.task_trackers.jira.host | first | default .Values.bro.flow.task_trackers.jira.host._default }}
+            username: {{ pluck .Values.werf.env .Values.bro.flow.task_trackers.jira.username | first | default .Values.bro.flow.task_trackers.jira.username._default }}
+            apiToken: {{ pluck .Values.werf.env .Values.token.jira | first | default .Values.token.jira._default }}
+            enabled: true
+        repositories:
+          gitlab:
+            host: {{ pluck .Values.werf.env .Values.bro.flow.repositories.gitlab.host | first | default .Values.bro.flow.repositories.gitlab.host._default }}
+            token: {{ pluck .Values.werf.env .Values.token.gitlab | first | default .Values.token.gitlab._default }}
+            repositories:
+              - path: timebook/timebook
+                preMerge: master
+              - path: timebook/timebook.web-client
+                preMerge: master
+              - path: IT/DEV/shift-sender
+                preMerge: master
+              - path: IT/DEV/Node-MS/auchan-ms
+                preMerge: master
+              - path: IT/DEV/Node-MS/lenta-ms
+                preMerge: master
+              - path: IT/DEV/Node-MS/document-ms
+                preMerge: master
+              - path: IT/DEV/web-sockets
+                preMerge: master
+              - path: IT/DEV/recognition/surf
+                preMerge: master
+
+    logging:
+      pattern:
+        console: "%d{yyyy-MM-dd HH:mm:ss} %clr(${LOG_LEVEL_PATTERN:%5p}) %msg%n"
+      level:
+        ru.timebook.bro.*: {{ pluck .Values.werf.env .Values.logging | first | default .Values.logging._default }}
