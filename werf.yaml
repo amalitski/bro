@@ -32,5 +32,4 @@ docker:
   WORKDIR: /app
 shell:
   install:
-    - export TZ=Europe/Moscow
     - mkdir /app
