@@ -223,7 +223,7 @@ public class MergeService {
 
     private boolean mergeRecursive(Merge merge, File dirRepo) throws IOException {
         var branchFirstOpt = merge.getBranches().stream().findFirst();
-        if (branchFirstOpt.isEmpty()){
+        if (branchFirstOpt.isEmpty()) {
             return true;
         }
         var branchFirst = branchFirstOpt.get();
@@ -264,7 +264,7 @@ public class MergeService {
         return true;
     }
 
-    private String getMergeCmd(Merge.Branch branch){
+    private String getMergeCmd(Merge.Branch branch) {
         return config.getStage().getMergeCmd()
                 .replace("{branchName}", branch.getBranchName());
     }

@@ -11,6 +11,7 @@ import java.util.Optional;
 @Repository
 public interface BuildRepository extends CrudRepository<Build, Long> {
     Optional<Build> findFirstByOrderByStartAtDesc();
+
     @Query(value = "SELECT b FROM Build b JOIN b.buildHasProjects bp WHERE bp.pushed = true GROUP BY b")
     List<Build> findAllPushed(Pageable pageable);
 }

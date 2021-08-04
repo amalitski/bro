@@ -146,7 +146,7 @@ public class GitlabGitRepository implements GitRepository {
         return maps;
     }
 
-    private Merge getMergeByPr(Issue.PullRequest pr){
+    private Merge getMergeByPr(Issue.PullRequest pr) {
         var branches = new LinkedHashSet<String>();
         var rep = getPreMergeBranch(pr.getProjectName());
         rep.ifPresent(repository -> branches.addAll(repository.getPreMerge()));
@@ -159,14 +159,14 @@ public class GitlabGitRepository implements GitRepository {
                 .projectId(DigestUtils.md5DigestAsHex(pr.getProjectName().getBytes(StandardCharsets.UTF_8)))
                 .projectName(pr.getProjectName())
                 .projectSafeName(pr.getProjectName().replaceAll("[^A-Za-z0-9\\-_.]", "."))
-                .projectShortName(pr.getProjectName().substring(0,1).toUpperCase())
+                .projectShortName(pr.getProjectName().substring(0, 1).toUpperCase())
                 .httpUrlRepo(pr.getHttpUrlRepo())
                 .sshUrlRepo(pr.getSshUrlRepo())
                 .push(Merge.Push.builder().deploy(Merge.Push.Deploy.builder().build()).build())
                 .build();
     }
 
-    private Merge getMergeByRepo(Config.Repositories.Gitlab.Repository repo){
+    private Merge getMergeByRepo(Config.Repositories.Gitlab.Repository repo) {
         var merge = Merge.builder();
         try {
             var project = getApi().getProjectApi().getProject(repo.getPath());
@@ -178,7 +178,7 @@ public class GitlabGitRepository implements GitRepository {
                     .projectId(DigestUtils.md5DigestAsHex(repo.getPath().getBytes(StandardCharsets.UTF_8)))
                     .projectName(repo.getPath())
                     .projectSafeName(repo.getPath().replaceAll("[^A-Za-z0-9\\-_.]", "."))
-                    .projectShortName(repo.getPath().substring(0,1).toUpperCase())
+                    .projectShortName(repo.getPath().substring(0, 1).toUpperCase())
                     .httpUrlRepo(project.getHttpUrlToRepo())
                     .sshUrlRepo(project.getSshUrlToRepo())
                     .push(Merge.Push.builder().deploy(Merge.Push.Deploy.builder().build()).build());
@@ -200,7 +200,7 @@ public class GitlabGitRepository implements GitRepository {
         var p = new PipelineFilter();
         p.setRef(ref);
         try {
-             return api.getPipelineApi().getPipelines(projectName, p).stream().map(pp -> {
+            return api.getPipelineApi().getPipelines(projectName, p).stream().map(pp -> {
                 try {
                     var job = api.getJobApi().getJobsForPipeline(projectName, pp.getId()).stream()
                             .filter(jj -> jj.getName().equals(configStage.getDeploy().getJobName())).findFirst();

@@ -28,7 +28,7 @@ public class Merge {
     private String initCode;
 
     @JsonIgnore
-    public boolean getInitSuccess(){
+    public boolean getInitSuccess() {
         return this.initCode.equals("0");
     }
 

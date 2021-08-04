@@ -38,6 +38,7 @@ public class FlowService {
             return out.trim();
         }
     }
+
     @Data
     @Builder
     public static class Build {
@@ -46,6 +47,7 @@ public class FlowService {
         private int issuesFails;
         private String buildStartAt;
     }
+
     @Data
     @Builder
     public static class Response {
@@ -55,11 +57,11 @@ public class FlowService {
         private final Build lastBuild;
     }
 
-    public FlowService (BuildRepository buildRepository){
+    public FlowService(BuildRepository buildRepository) {
         this.buildRepository = buildRepository;
     }
 
-    private Build getBuild(ru.timebook.bro.flow.modules.build.Build b){
+    private Build getBuild(ru.timebook.bro.flow.modules.build.Build b) {
         try {
             var i = JsonUtil.deserialize(b.getIssuesJson(), Issue[].class);
             var iSuccess = Arrays.stream(i).filter(ru.timebook.bro.flow.modules.taskTracker.Issue::isMergeLocalSuccess).count();
@@ -69,7 +71,7 @@ public class FlowService {
                     .issuesFails(Math.toIntExact(iFails))
                     .buildStartAt(DateTimeUtil.formatFull(b.getStartAt()))
                     .build();
-        } catch (IOException e){
+        } catch (IOException e) {
             log.error("Catch Exception", e);
             return null;
         }
@@ -79,7 +81,7 @@ public class FlowService {
         var b = buildRepository.findFirstByOrderByStartAtDesc();
         if (b.isEmpty()) {
             return Response.builder()
-                    .lastBuild( Build.builder().issuesSuccess(0).issuesFails(0).build())
+                    .lastBuild(Build.builder().issuesSuccess(0).issuesFails(0).build())
                     .build();
         }
         var merges = b.get().getBuildHasProjects().stream().map(buildHasProject -> {
