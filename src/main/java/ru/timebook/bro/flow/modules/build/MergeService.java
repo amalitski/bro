@@ -3,6 +3,8 @@ package ru.timebook.bro.flow.modules.build;
 import com.google.common.base.Stopwatch;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 import ru.timebook.bro.flow.configs.Config;
@@ -25,11 +27,13 @@ import java.util.stream.Collectors;
 @Service
 public class MergeService {
     private final Config config;
+    private final BuildRepository buildRepository;
     private final ProjectRepository projectRepository;
     private final GitlabGitRepository gitlabGitRepository;
 
-    public MergeService(Config config, ProjectRepository projectRepository, GitlabGitRepository gitlabGitRepository) {
+    public MergeService(Config config, BuildRepository buildRepository, ProjectRepository projectRepository, GitlabGitRepository gitlabGitRepository) {
         this.config = config;
+        this.buildRepository = buildRepository;
         this.projectRepository = projectRepository;
         this.gitlabGitRepository = gitlabGitRepository;
     }
@@ -46,6 +50,18 @@ public class MergeService {
     }
 
     public void clean() {
+        cleanDirectory();
+        cleanDatabase();
+    }
+
+    private void cleanDatabase() {
+        var items = buildRepository.findAllPushed(PageRequest.of(1, 100, Sort.by("startAt").descending()));
+        if (!items.isEmpty()) {
+            buildRepository.deleteAll(items);
+        }
+    }
+
+    private void cleanDirectory() {
         var dir = System.getProperty("user.dir") + File.separator + config.getStage().getTemp().getTempDir();
         var dirsRemove = new ArrayList<File>();
         getDirectories(dir).parallelStream().forEach(f -> {
@@ -83,11 +99,13 @@ public class MergeService {
         });
     }
 
-    public void deployJob(List<Merge> merges) {
-        merges.stream().filter(m -> m.getPush().isPushed()).forEach(m -> {
-            var jobId = gitlabGitRepository.getJobId(m.getProjectName(), m.getLastCommitSha());
-            jobId.ifPresent(s -> m.getPush().setJob(Merge.Push.Job.builder().id(Integer.parseInt(s)).build()));
-        });
+    public void deployInfo(List<Merge> merges) {
+        if (merges.stream().noneMatch(m -> m.getPush().isPushed())) {
+            return;
+        }
+        merges.stream()
+                .filter(m -> m.getPush().isPushed())
+                .forEach(m -> m.getPush().setDeploy(gitlabGitRepository.getDeploy(m.getProjectName(), config.getStage().getBranchName())));
     }
 
     private void pushExec(Merge merge) throws Exception {

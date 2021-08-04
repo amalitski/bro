@@ -1,7 +1,7 @@
 package ru.timebook.bro.flow;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
-import org.gitlab4j.api.Constants;
 import org.gitlab4j.api.GitLabApiException;
 import org.gitlab4j.api.models.PipelineFilter;
 import org.junit.jupiter.api.Disabled;
@@ -10,17 +10,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.cache.CacheManager;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.util.Assert;
 import ru.timebook.bro.flow.configs.Config;
-import ru.timebook.bro.flow.modules.build.BuildHasProject;
 import ru.timebook.bro.flow.modules.build.BuildHasProjectRepository;
 import ru.timebook.bro.flow.modules.build.BuildRepository;
 import ru.timebook.bro.flow.modules.build.ExecutionService;
 import ru.timebook.bro.flow.modules.git.GitlabGitRepository;
-import ru.timebook.bro.flow.utils.JsonUtil;
-
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Invocation;
@@ -31,11 +26,13 @@ import java.io.FileFilter;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
+@Slf4j
 @SpringBootTest
 @Disabled
 public class ExecutionServiceIntegrationTest {
-    private final static Logger logger = LoggerFactory.getLogger(ExecutionServiceIntegrationTest.class);
     @Autowired
     private ExecutionService executionService;
     @Autowired
@@ -44,6 +41,8 @@ public class ExecutionServiceIntegrationTest {
     private Config config;
     @Autowired
     private BuildRepository buildRepository;
+    @Autowired
+    private BuildHasProjectRepository buildHasProjectRepository;
     @Test
     @Disabled
     void middlewareTest() throws Exception {
@@ -51,7 +50,7 @@ public class ExecutionServiceIntegrationTest {
 //        executionService.setDeployed(response.getIssues());
 
         var out = executionService.getOut(response.getIssues(), response.getMerges());
-        logger.info(out);
+        log.info(out);
     }
 
     @Test
@@ -61,14 +60,14 @@ public class ExecutionServiceIntegrationTest {
         Invocation.Builder invocationBuilder = webTarget.request();
         invocationBuilder.accept("application/json");
         Response response = invocationBuilder.get();
-        logger.info("Response status: {}", response.getStatus());
+        log.info("Response status: {}", response.getStatus());
         Assert.isTrue(response.getStatus() >= 200, "Load HTTPS uri");
     }
 
     @Test
     void buildRelationTest() {
         var b = buildRepository.findFirstByOrderByStartAtDesc();
-        b.get().getBuildHasProjects().forEach(buildHasProject -> logger.info("{}", buildHasProject.getId()));
+        b.get().getBuildHasProjects().forEach(buildHasProject -> log.info("{}", buildHasProject.getId()));
     }
 
     @Test
@@ -78,13 +77,13 @@ public class ExecutionServiceIntegrationTest {
             var duration = Duration.parse(config.getStage().getTemp().getCleanAfter());
             var olden = Instant.now().plusSeconds(duration.getSeconds());
             if (FileUtils.isFileOlder(f, olden)) {
-                logger.info("Dir old: {} / {}", f.getName(), olden);
+                log.info("Dir old: {} / {}", f.getName(), olden);
 
             } else {
                 getDirectories(f.getAbsolutePath()).stream()
                         .filter(pProject -> !pProject.getName().equals(config.getStage().getTemp().getInitDir()))
                         .forEach(fProject -> {
-                        logger.info("Dir projects: {}/{}", f.getName(), fProject.getName());
+                        log.info("Dir projects: {}/{}", f.getName(), fProject.getName());
                 });
             }
         });

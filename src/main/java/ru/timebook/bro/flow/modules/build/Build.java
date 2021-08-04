@@ -17,7 +17,7 @@ public class Build {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
     @EqualsAndHashCode.Exclude
-    @OneToMany(mappedBy = "build", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "build", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<BuildHasProject> buildHasProjects;
     @Lob
     @Column

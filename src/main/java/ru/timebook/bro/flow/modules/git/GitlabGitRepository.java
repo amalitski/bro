@@ -13,7 +13,6 @@ import ru.timebook.bro.flow.configs.Config;
 import ru.timebook.bro.flow.modules.taskTracker.Issue;
 import ru.timebook.bro.flow.utils.BufferUtil;
 
-import javax.swing.text.html.Option;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -163,7 +162,7 @@ public class GitlabGitRepository implements GitRepository {
                 .projectShortName(pr.getProjectName().substring(0,1).toUpperCase())
                 .httpUrlRepo(pr.getHttpUrlRepo())
                 .sshUrlRepo(pr.getSshUrlRepo())
-                .push(Merge.Push.builder().build())
+                .push(Merge.Push.builder().deploy(Merge.Push.Deploy.builder().build()).build())
                 .build();
     }
 
@@ -182,7 +181,7 @@ public class GitlabGitRepository implements GitRepository {
                     .projectShortName(repo.getPath().substring(0,1).toUpperCase())
                     .httpUrlRepo(project.getHttpUrlToRepo())
                     .sshUrlRepo(project.getSshUrlToRepo())
-                    .push(Merge.Push.builder().build());
+                    .push(Merge.Push.builder().deploy(Merge.Push.Deploy.builder().build()).build());
         } catch (Exception e) {
             log.error("Catch exception", e);
         }
@@ -196,27 +195,33 @@ public class GitlabGitRepository implements GitRepository {
         return config.getRepositories().stream().filter(r -> r.getPath().equals(projectName)).findFirst();
     }
 
-    public Optional<String> getJobId(String projectName, String sha) {
+    public Merge.Push.Deploy getDeploy(String projectName, String ref) {
         var api = getApi();
         var p = new PipelineFilter();
-        p.setSha(sha);
+        p.setRef(ref);
         try {
-            return api.getPipelineApi().getPipelines(projectName, p).stream().map(pp -> {
+             return api.getPipelineApi().getPipelines(projectName, p).stream().map(pp -> {
                 try {
                     var job = api.getJobApi().getJobsForPipeline(projectName, pp.getId()).stream()
                             .filter(jj -> jj.getName().equals(configStage.getDeploy().getJobName())).findFirst();
                     if (job.isPresent()) {
-                        return job.get().getId().toString();
+                        var j = job.get();
+                        return Merge.Push.Deploy.builder()
+                                .commitSha(j.getCommit().getId())
+                                .jobId(j.getId())
+                                .jobStatus(j.getStatus().name())
+                                .pipelineId(j.getPipeline().getId())
+                                .pipelineUri(j.getPipeline().getWebUrl()).build();
                     }
                 } catch (GitLabApiException e) {
                     log.error("Find job for deploy to stage return Exception", e);
                 }
                 return null;
-            }).filter(Objects::nonNull).findFirst();
+            }).filter(Objects::nonNull).findFirst().orElse(Merge.Push.Deploy.builder().build());
         } catch (GitLabApiException e) {
             log.error("Find job for deploy to stage return Exception", e);
         }
-        return Optional.empty();
+        return Merge.Push.Deploy.builder().build();
     }
 }
 

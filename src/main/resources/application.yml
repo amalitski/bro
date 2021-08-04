@@ -10,7 +10,7 @@ bro:
       cronReceive: "0 */10 * * * ?"
       basePath: /bro
       deploy:
-        jobName: Deploy to Test
+        jobName: Deploy to Stage (example)
       git:
         userName: Bender Rodriguez
         userEmail: bender@company.com

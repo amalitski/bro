@@ -39,14 +39,18 @@ public class Merge {
     public static class Push {
         private boolean pushed;
         private String log;
-        private Job job;
+        private Deploy deploy;
 
         @Data
         @Builder
         @NoArgsConstructor
         @AllArgsConstructor
-        public static class Job {
-            private int id;
+        public static class Deploy {
+            private String commitSha;
+            private Integer jobId;
+            private String jobStatus;
+            private Integer pipelineId;
+            private String pipelineUri;
         }
     }
 

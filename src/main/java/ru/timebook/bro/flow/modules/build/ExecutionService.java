@@ -62,7 +62,7 @@ public class ExecutionService {
         mergeService.push(merges);
         issues.forEach(i -> i.getPullRequests().forEach(pr -> MergeService.getBranchByPr(pr, merges).ifPresent(pr::setBranch)));
         issues.forEach(MergeService::updateCommitters);
-        mergeService.deployJob(merges);
+        mergeService.deployInfo(merges);
         createBuild(issues, merges);
         mergeService.clean();
         log.debug("Complete: {}", timer.stop());
@@ -70,6 +70,10 @@ public class ExecutionService {
     }
 
     private void createBuild(List<Issue> issues, List<Merge> merges) {
+        if (merges.stream().noneMatch(m -> m.getPush().isPushed())) {
+            log.trace("Build doesn't saved, because not pushed");
+            return;
+        }
         var b = buildRepository.save(Build.builder().issuesJson(JsonUtil.serialize(issues)).startAt(LocalDateTime.now()).build());
         var buildHasProjects = merges.stream().map(m -> {
             var p = projectRepository.findByName(m.getProjectName())
@@ -81,7 +85,8 @@ public class ExecutionService {
                     .build(b)
                     .mergesJson(JsonUtil.serialize(m))
                     .mergeCheckSum(m.getCheckSum())
-                    .lastCommitSha(m.getLastCommitSha())
+                    .jobId(m.getPush().getDeploy().getJobId())
+                    .lastCommitSha(m.getPush().getDeploy().getCommitSha())
                     .pushed(m.getPush().isPushed()).build();
         }).filter(Objects::nonNull).collect(Collectors.toList());
         buildHasProjectRepository.saveAll(buildHasProjects);

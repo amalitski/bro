@@ -33,7 +33,7 @@ public class BuildHasProject {
     private String lastCommitSha;
 
     @Column
-    private int jobId;
+    private Integer jobId;
 
     @Column
     private boolean pushed;
