@@ -17,7 +17,7 @@ app:
         _default: 2G
     limits:
       memory:
-        _default: 1024Mi
+        _default: 512Mi
         rc: 512Mi
         production: 128G
 
