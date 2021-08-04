@@ -10,7 +10,7 @@ app:
         _default: 50m
         production: 50m
       memory:
-        _default: 1024Mi
+        _default: 512Mi
         rc: 512Mi
         production: 512M
       storage:
@@ -22,7 +22,7 @@ app:
         production: 128G
 
 java_opts:
-  _default: "-Dhttps.protocols=TLSv1.2 -Xms64m -Xmx512m"
+  _default: "-Dhttps.protocols=TLSv1.2 -Xss256k -Xms64m -Xmx256m"
 
 git_ssh_command:
   _default: "ssh -i /app/git_key.private -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
