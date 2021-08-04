@@ -22,7 +22,7 @@ app:
         production: 128G
 
 java_opts:
-  _default: "-Dhttps.protocols=TLSv1.2 -Xms64m -Xmx256m -Xss256k"
+  _default: "-Dhttps.protocols=TLSv1.2 -Xms64m -Xmx768m -Xss256k"
 
 git_ssh_command:
   _default: "ssh -i /app/git_key.private -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
