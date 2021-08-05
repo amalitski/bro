@@ -2,6 +2,7 @@ package ru.timebook.bro.flow.modules.git;
 
 import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
+import org.gitlab4j.api.Constants;
 import org.gitlab4j.api.GitLabApi;
 import org.gitlab4j.api.GitLabApiException;
 import org.gitlab4j.api.ProxyClientConfig;
@@ -146,7 +147,7 @@ public class GitlabGitRepository implements GitRepository {
         return maps;
     }
 
-    private Merge getMergeByPr(Issue.PullRequest pr){
+    private Merge getMergeByPr(Issue.PullRequest pr) {
         var branches = new LinkedHashSet<String>();
         var rep = getPreMergeBranch(pr.getProjectName());
         rep.ifPresent(repository -> branches.addAll(repository.getPreMerge()));
@@ -159,14 +160,14 @@ public class GitlabGitRepository implements GitRepository {
                 .projectId(DigestUtils.md5DigestAsHex(pr.getProjectName().getBytes(StandardCharsets.UTF_8)))
                 .projectName(pr.getProjectName())
                 .projectSafeName(pr.getProjectName().replaceAll("[^A-Za-z0-9\\-_.]", "."))
-                .projectShortName(pr.getProjectName().substring(0,1).toUpperCase())
+                .projectShortName(pr.getProjectName().substring(0, 1).toUpperCase())
                 .httpUrlRepo(pr.getHttpUrlRepo())
                 .sshUrlRepo(pr.getSshUrlRepo())
                 .push(Merge.Push.builder().deploy(Merge.Push.Deploy.builder().build()).build())
                 .build();
     }
 
-    private Merge getMergeByRepo(Config.Repositories.Gitlab.Repository repo){
+    private Merge getMergeByRepo(Config.Repositories.Gitlab.Repository repo) {
         var merge = Merge.builder();
         try {
             var project = getApi().getProjectApi().getProject(repo.getPath());
@@ -178,7 +179,7 @@ public class GitlabGitRepository implements GitRepository {
                     .projectId(DigestUtils.md5DigestAsHex(repo.getPath().getBytes(StandardCharsets.UTF_8)))
                     .projectName(repo.getPath())
                     .projectSafeName(repo.getPath().replaceAll("[^A-Za-z0-9\\-_.]", "."))
-                    .projectShortName(repo.getPath().substring(0,1).toUpperCase())
+                    .projectShortName(repo.getPath().substring(0, 1).toUpperCase())
                     .httpUrlRepo(project.getHttpUrlToRepo())
                     .sshUrlRepo(project.getSshUrlToRepo())
                     .push(Merge.Push.builder().deploy(Merge.Push.Deploy.builder().build()).build());
@@ -195,12 +196,23 @@ public class GitlabGitRepository implements GitRepository {
         return config.getRepositories().stream().filter(r -> r.getPath().equals(projectName)).findFirst();
     }
 
+    public Optional<String> getJobStatus(String projectName, Integer jobId) {
+        var api = getApi();
+        try {
+            var j = api.getJobApi().getJob(projectName, jobId);
+            return Optional.of(j.getStatus().name().toLowerCase());
+        } catch (GitLabApiException e) {
+            log.error("Find job return Exception", e);
+        }
+        return Optional.empty();
+    }
+
     public Merge.Push.Deploy getDeploy(String projectName, String ref) {
         var api = getApi();
         var p = new PipelineFilter();
         p.setRef(ref);
         try {
-             return api.getPipelineApi().getPipelines(projectName, p).stream().map(pp -> {
+            return api.getPipelineApi().getPipelines(projectName, p).stream().map(pp -> {
                 try {
                     var job = api.getJobApi().getJobsForPipeline(projectName, pp.getId()).stream()
                             .filter(jj -> jj.getName().equals(configStage.getDeploy().getJobName())).findFirst();
@@ -209,7 +221,7 @@ public class GitlabGitRepository implements GitRepository {
                         return Merge.Push.Deploy.builder()
                                 .commitSha(j.getCommit().getId())
                                 .jobId(j.getId())
-                                .jobStatus(j.getStatus().name())
+                                .jobStatus(j.getStatus().name().toLowerCase())
                                 .pipelineId(j.getPipeline().getId())
                                 .pipelineUri(j.getPipeline().getWebUrl()).build();
                     }

@@ -1,5 +1,6 @@
 package ru.timebook.bro.flow.utils;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -23,5 +24,9 @@ public class DateTimeUtil {
     public static String formatFull(LocalDateTime date) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
         return date.format(formatter);
+    }
+
+    public static LocalDateTime duration(String duration) {
+        return LocalDateTime.now().plusNanos(Duration.parse(duration).toNanos());
     }
 }

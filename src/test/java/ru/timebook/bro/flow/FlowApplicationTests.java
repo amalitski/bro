@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.util.Assert;
 import ru.timebook.bro.flow.configs.Config;
+import ru.timebook.bro.flow.utils.DateTimeUtil;
 import ru.timebook.bro.flow.utils.GravatarUtil;
 
 import javax.ws.rs.client.Client;
@@ -48,6 +49,13 @@ class FlowApplicationTests {
         var localDate = ZonedDateTime.now().plusSeconds(duration.getSeconds());
         logger.info("result: {}", localDate.format(DateTimeFormatter.ofPattern("yyyyMMdd HH:mm Z")));
     }
+
+    @Test
+    void durationDayTimeTest() {
+        var localDate = DateTimeUtil.duration("PT-1H");
+        logger.info("result: {}", localDate.format(DateTimeFormatter.ofPattern("yyyyMMdd HH:mm Z")));
+    }
+
 
     @Test
     void gravatarHashTest() {

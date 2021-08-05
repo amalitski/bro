@@ -21,25 +21,25 @@ import java.util.stream.Collectors;
 @Service
 public class RedmineTaskTracker implements TaskTracker {
     private final Config.TaskTrackers.Redmine config;
-    private  RedmineManager api;
+    private RedmineManager api;
 
-   public RedmineTaskTracker(Config config) {
+    public RedmineTaskTracker(Config config) {
         this.config = config.getTaskTrackers().getRedmine();
     }
 
-    public RedmineManager getApi(){
-       if (this.api == null) {
-           var cxMgr = new PoolingHttpClientConnectionManager();
-           cxMgr.setMaxTotal(100);
-           cxMgr.setDefaultMaxPerRoute(20);
-           var client= HttpClients.custom()
-                   .setConnectionManager(cxMgr)
-                   .setDefaultSocketConfig(SocketConfig.custom().setSoTimeout(config.getTimeout()).build())
-                   .build();
-           this.api = RedmineManagerFactory.createWithApiKey(config.getHost(), config.getApiKey(), client);
-           this.api.setObjectsPerPage(100);
-       }
-       return this.api;
+    public RedmineManager getApi() {
+        if (this.api == null) {
+            var cxMgr = new PoolingHttpClientConnectionManager();
+            cxMgr.setMaxTotal(100);
+            cxMgr.setDefaultMaxPerRoute(20);
+            var client = HttpClients.custom()
+                    .setConnectionManager(cxMgr)
+                    .setDefaultSocketConfig(SocketConfig.custom().setSoTimeout(config.getTimeout()).build())
+                    .build();
+            this.api = RedmineManagerFactory.createWithApiKey(config.getHost(), config.getApiKey(), client);
+            this.api.setObjectsPerPage(100);
+        }
+        return this.api;
     }
 
     @Override

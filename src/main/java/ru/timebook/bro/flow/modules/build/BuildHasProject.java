@@ -36,6 +36,9 @@ public class BuildHasProject {
     private Integer jobId;
 
     @Column
+    private String jobStatus;
+
+    @Column
     private boolean pushed;
 
     @Lob

@@ -11,7 +11,8 @@ public class LivenessService {
     public static class Response {
         private final int statusCode;
     }
-    public Response health(){
+
+    public Response health() {
         return Response.builder().statusCode(200).build();
     }
 }

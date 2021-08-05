@@ -290,6 +290,9 @@
                                             </div>
                                             <div class="col pl-0">
                                                 <a href="{{httpUrlRepo}}" class="text-muted font-weight-bold">{{projectName}}</a>
+                                                {{#push.deploy.jobId}}
+                                                    <a href="{{push.deploy.pipelineUri}}" title="{{push.deploy.jobStatus}}" class="badge rounded-pill {{#helper.hasDeployed}}{{push.deploy.jobStatus}}{{/helper.hasDeployed}}">D</a>
+                                                {{/push.deploy.jobId}}
                                                 <a class="text-dark float-right" data-toggle="collapse" href="#project-detail-{{projectId}}" aria-expanded="true">
                                                     <i class="mdi mdi-chevron-down font-18"></i>
                                                 </a>

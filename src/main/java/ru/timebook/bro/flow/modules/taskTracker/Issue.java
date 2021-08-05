@@ -20,8 +20,9 @@ public class Issue {
     private String uri;
     private Author author;
     private List<Committer> committers;
+
     @JsonIgnore
-    public boolean isMergeLocalSuccess(){
+    public boolean isMergeLocalSuccess() {
         return this.pullRequests.stream().filter(p -> p.getBranch() != null).allMatch(p -> p.getBranch().isMergeLocalSuccess() || p.getMerged());
     }
 
@@ -53,7 +54,7 @@ public class Issue {
         private String profileUri;
         private String name;
     }
-    
+
     @Data
     @Builder
     @NoArgsConstructor
