@@ -14,7 +14,8 @@ import java.util.concurrent.TimeUnit;
 @Service
 @EnableAsync
 public class FlowSchedule {
-    private final Semaphore lock = new Semaphore(1);
+    private final Semaphore lockJob = new Semaphore(1);
+    private final Semaphore lockMerge = new Semaphore(1);
     private final ExecutionService executionService;
 
     public FlowSchedule(ExecutionService executionService) {
@@ -25,19 +26,27 @@ public class FlowSchedule {
     @Scheduled(cron = "${bro.flow.stage.cronReceive}")
     public void refreshIssues() {
         try {
-            if (lock.tryAcquire(15, TimeUnit.MINUTES)) {
+            if (lockMerge.tryAcquire(15, TimeUnit.MINUTES)) {
                 executionService.mergeAndPush();
             }
         } catch (Exception e) {
             log.error("Exception: ", e);
         } finally {
-            lock.release();
+            lockMerge.release();
         }
     }
 
     @Async
     @Scheduled(cron = "${bro.flow.stage.git.cronReceive}")
     public void refreshGit() {
-        executionService.checkJobAndUpdateIssue();
+        try {
+            if (lockJob.tryAcquire(15, TimeUnit.MINUTES)) {
+                executionService.checkJobAndUpdateIssue();
+            }
+        } catch (Exception e) {
+            log.error("Exception: ", e);
+        } finally {
+            lockJob.release();
+        }
     }
 }

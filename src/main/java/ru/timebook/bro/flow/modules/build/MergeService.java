@@ -59,7 +59,8 @@ public class MergeService {
         }
         return builds.stream().filter(b -> {
             var c = b.getBuildHasProjects().stream().filter(bp -> Objects.nonNull(bp.getJobId())).filter(bp -> {
-                var status = gitlabGitRepository.getJobStatus(bp.getProject().getName(), bp.getJobId());
+                var p = bp.getProject();
+                var status = gitlabGitRepository.getJobStatus(p.getName(), bp.getJobId());
                 if (status.isEmpty() || status.get().equals(bp.getJobStatus())) {
                     return false;
                 }
@@ -73,7 +74,7 @@ public class MergeService {
                 }
                 bp.setJobStatus(s);
                 buildHasProjectRepository.save(bp);
-                log.trace("Job#{} set status {}", bp.getJobId(), bp.getJobStatus());
+                log.trace("Job#{}#{} set status {}", bp.getJobId(), p.getName(), bp.getJobStatus());
                 return true;
             }).count();
             return c > 0;
@@ -117,7 +118,7 @@ public class MergeService {
     }
 
     public void push(List<Merge> merges) throws Exception {
-        merges.forEach(m -> {
+        merges.parallelStream().forEach(m -> {
             if (!m.getInitSuccess()) {
                 log.error("Skip push command, because init repo with error. See init logs: {}", m.getInitStdout());
                 return;
@@ -232,6 +233,7 @@ public class MergeService {
         merge.setInitStdout(out);
         merge.setInitCode(respFetch.get("code"));
         if (!respFetch.get("code").equals("0")) {
+            log.error("Git fetch return error. Stdout: {}, Stderr: {}", respFetch.get("stdout"), respFetch.get("stderr"));
             throw new Exception("Failed to fetch origin: " + dirInit.getPath());
         }
 

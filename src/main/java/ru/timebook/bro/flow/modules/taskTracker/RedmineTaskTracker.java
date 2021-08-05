@@ -85,35 +85,37 @@ public class RedmineTaskTracker implements TaskTracker {
         var listIssues = new ArrayList<Issue>();
         var issues = getApi().getIssueManager().getIssues(params);
 
-        for (var i : issues) {
+        issues.parallelStream().forEach(i -> {
             if (DateTimeUtil.toLocalDate(i.getUpdatedOn()).isBefore(afterDate)) {
-                continue;
+                return;
             }
-            var aFull = getApi().getUserManager().getUserById(i.getAuthor().getId());
-            var avatar = (aFull.getMail() != null) ? GravatarUtil.getUri(aFull.getMail(), 50) : null;
-            var a = Issue.Author.builder()
-                    .id(String.valueOf(i.getAuthor().getId()))
-                    .avatarUri(avatar)
-                    .profileUri(String.format("%s/users/%s", config.getHost(), i.getAuthor().getId()))
-                    .visibleName(String.format("%s", i.getAuthor().getFullName()))
-                    .build();
-
-            var row = Issue.builder()
-                    .id(String.valueOf(i.getId()))
-                    .uri(String.format("%s/issues/%s", config.getHost(), i.getId()))
-                    .subject(i.getSubject())
-                    .taskTracker(this)
-                    .author(a)
-                    .taskTrackerClazz(this.getClass());
-
-            for (var f : i.getCustomFields()) {
-                if (customFieldsIds.contains(String.valueOf(f.getId()))) {
-                    var pr = Issue.PullRequest.builder().uri(f.getValue()).name(f.getName()).build();
-                    row.pullRequest(pr);
+            try {
+                var aFull = getApi().getUserManager().getUserById(i.getAuthor().getId());
+                var avatar = (aFull.getMail() != null) ? GravatarUtil.getUri(aFull.getMail(), 50) : null;
+                var a = Issue.Author.builder()
+                        .id(String.valueOf(i.getAuthor().getId()))
+                        .avatarUri(avatar)
+                        .profileUri(String.format("%s/users/%s", config.getHost(), i.getAuthor().getId()))
+                        .visibleName(String.format("%s", i.getAuthor().getFullName()))
+                        .build();
+                var row = Issue.builder()
+                        .id(String.valueOf(i.getId()))
+                        .uri(String.format("%s/issues/%s", config.getHost(), i.getId()))
+                        .subject(i.getSubject())
+                        .taskTracker(this)
+                        .author(a)
+                        .taskTrackerClazz(this.getClass());
+                for (var f : i.getCustomFields()) {
+                    if (customFieldsIds.contains(String.valueOf(f.getId()))) {
+                        var pr = Issue.PullRequest.builder().uri(f.getValue()).name(f.getName()).build();
+                        row.pullRequest(pr);
+                    }
                 }
+                listIssues.add(row.build());
+            } catch (RedmineException e) {
+                log.error("Redmine catch exception", e);
             }
-            listIssues.add(row.build());
-        }
+        });
         return listIssues;
     }
 
