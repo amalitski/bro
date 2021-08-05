@@ -12,6 +12,7 @@ bro:
       deploy:
         jobName: Deploy to Stage (example)
       git:
+        cronReceive: "*/1 * * * * ?"
         userName: Bender Rodriguez
         userEmail: bender@company.com
       temp:
@@ -54,10 +55,9 @@ bro:
         enableRequestLogging: false
         enabled: true
         timeout: 30000
-
 logging:
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} %clr(${LOG_LEVEL_PATTERN:%5p}) %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss} %clr([%15.15t]){faint} %clr(${LOG_LEVEL_PATTERN:%5p}) %msg%n"
   level:
     ru.timebook.bro.*: trace
 spring:
@@ -72,6 +72,9 @@ spring:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: update
+    properties:
+      hibernate:
+        enable_lazy_load_no_trans: true
   jackson:
     property-naming-strategy: com.fasterxml.jackson.databind.PropertyNamingStrategy.SnakeCaseStrategy
   web:

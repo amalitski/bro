@@ -4,12 +4,15 @@ import com.google.common.base.Stopwatch;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import ru.timebook.bro.flow.configs.Config;
 import ru.timebook.bro.flow.modules.git.GitRepository;
 import ru.timebook.bro.flow.modules.taskTracker.Issue;
 import ru.timebook.bro.flow.modules.taskTracker.TaskTracker;
 import ru.timebook.bro.flow.modules.git.Merge;
+import ru.timebook.bro.flow.utils.DateTimeUtil;
 import ru.timebook.bro.flow.utils.JsonUtil;
 
 import java.time.LocalDateTime;
@@ -69,6 +72,11 @@ public class ExecutionService {
         return Response.builder().issues(issues).merges(merges).build();
     }
 
+    public void checkJobAndUpdateIssue() {
+        mergeService.checkJob();
+//        log.info("{}", b.size());
+    }
+
     private void createBuild(List<Issue> issues, List<Merge> merges) {
         if (merges.stream().noneMatch(m -> m.getPush().isPushed())) {
             log.trace("Build doesn't saved, because not pushed");
@@ -86,6 +94,7 @@ public class ExecutionService {
                     .mergesJson(JsonUtil.serialize(m))
                     .mergeCheckSum(m.getCheckSum())
                     .jobId(m.getPush().getDeploy().getJobId())
+                    .jobStatus(m.getPush().getDeploy().getJobStatus())
                     .lastCommitSha(m.getPush().getDeploy().getCommitSha())
                     .pushed(m.getPush().isPushed()).build();
         }).filter(Objects::nonNull).collect(Collectors.toList());

@@ -12,6 +12,7 @@ import ru.timebook.bro.flow.modules.git.GitlabGitRepository;
 import ru.timebook.bro.flow.modules.taskTracker.Issue;
 import ru.timebook.bro.flow.modules.git.Merge;
 import ru.timebook.bro.flow.utils.DateTimeUtil;
+import ru.timebook.bro.flow.utils.JsonUtil;
 import ru.timebook.bro.flow.utils.StringUtil;
 
 import java.io.*;
@@ -28,12 +29,14 @@ import java.util.stream.Collectors;
 public class MergeService {
     private final Config config;
     private final BuildRepository buildRepository;
+    private final BuildHasProjectRepository buildHasProjectRepository;
     private final ProjectRepository projectRepository;
     private final GitlabGitRepository gitlabGitRepository;
 
-    public MergeService(Config config, BuildRepository buildRepository, ProjectRepository projectRepository, GitlabGitRepository gitlabGitRepository) {
+    public MergeService(Config config, BuildRepository buildRepository, BuildHasProjectRepository buildHasProjectRepository, ProjectRepository projectRepository, GitlabGitRepository gitlabGitRepository) {
         this.config = config;
         this.buildRepository = buildRepository;
+        this.buildHasProjectRepository = buildHasProjectRepository;
         this.projectRepository = projectRepository;
         this.gitlabGitRepository = gitlabGitRepository;
     }
@@ -47,6 +50,34 @@ public class MergeService {
                 log.error("Merge exception", e);
             }
         });
+    }
+
+    public List<Build> checkJob() {
+        var builds = buildRepository.findFirstByProcessingJob(PageRequest.of(0, 5, Sort.by("startAt").descending()), DateTimeUtil.duration("PT-120H"));
+        if (builds.isEmpty()) {
+            return List.of();
+        }
+        return builds.stream().filter(b -> {
+            var c = b.getBuildHasProjects().stream().filter(bp -> Objects.nonNull(bp.getJobId())).filter(bp -> {
+                var status = gitlabGitRepository.getJobStatus(bp.getProject().getName(), bp.getJobId());
+                if (status.isEmpty() || status.get().equals(bp.getJobStatus())) {
+                    return false;
+                }
+                var s = status.get();
+                try {
+                    var m = JsonUtil.deserialize(bp.getMergesJson(), Merge.class);
+                    m.getPush().getDeploy().setJobStatus(s);
+                    bp.setMergesJson(JsonUtil.serialize(m));
+                } catch (IOException e) {
+                    log.error("Catch exception", e);
+                }
+                bp.setJobStatus(s);
+                buildHasProjectRepository.save(bp);
+                log.trace("Job#{} set status {}", bp.getJobId(), bp.getJobStatus());
+                return true;
+            }).count();
+            return c > 0;
+        }).collect(Collectors.toList());
     }
 
     public void clean() {

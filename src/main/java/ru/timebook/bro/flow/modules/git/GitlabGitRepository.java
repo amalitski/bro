@@ -2,6 +2,7 @@ package ru.timebook.bro.flow.modules.git;
 
 import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
+import org.gitlab4j.api.Constants;
 import org.gitlab4j.api.GitLabApi;
 import org.gitlab4j.api.GitLabApiException;
 import org.gitlab4j.api.ProxyClientConfig;
@@ -195,6 +196,17 @@ public class GitlabGitRepository implements GitRepository {
         return config.getRepositories().stream().filter(r -> r.getPath().equals(projectName)).findFirst();
     }
 
+    public Optional<String> getJobStatus(String projectName, Integer jobId) {
+        var api = getApi();
+        try {
+            var j = api.getJobApi().getJob(projectName, jobId);
+            return Optional.of(j.getStatus().name().toLowerCase());
+        } catch (GitLabApiException e) {
+            log.error("Find job return Exception", e);
+        }
+        return Optional.empty();
+    }
+
     public Merge.Push.Deploy getDeploy(String projectName, String ref) {
         var api = getApi();
         var p = new PipelineFilter();
@@ -209,7 +221,7 @@ public class GitlabGitRepository implements GitRepository {
                         return Merge.Push.Deploy.builder()
                                 .commitSha(j.getCommit().getId())
                                 .jobId(j.getId())
-                                .jobStatus(j.getStatus().name())
+                                .jobStatus(j.getStatus().name().toLowerCase())
                                 .pipelineId(j.getPipeline().getId())
                                 .pipelineUri(j.getPipeline().getWebUrl()).build();
                     }

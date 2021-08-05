@@ -44,6 +44,7 @@ public class Config {
 
         @Data
         public static class Git {
+            private String cronReceive;
             private String userName;
             private String userEmail;
         }
