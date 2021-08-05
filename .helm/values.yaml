@@ -10,16 +10,16 @@ app:
         _default: 50m
         production: 50m
       memory:
-        _default: 512Mi
-        rc: 512Mi
-        production: 512M
+        _default: 1024Mi
+        rc: 1024Mi
+        production: 1024Mi
       storage:
         _default: 2G
     limits:
       memory:
         _default: 1024Mi
-        rc: 512Mi
-        production: 128G
+        rc: 1024Mi
+        production: 1024Mi
 
 java_opts:
   _default: "-Dhttps.protocols=TLSv1.2 -Xss256k -Xms64m -Xmx768m"
