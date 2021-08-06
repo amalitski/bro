@@ -10,10 +10,9 @@ import org.springframework.stereotype.Service;
 import ru.timebook.bro.flow.configs.Config;
 
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 @Slf4j
@@ -39,34 +38,24 @@ public class JiraTaskTracker implements TaskTracker {
     }
 
     @Override
-    public void setDeployed(List<Issue> issue) {
-        issue.forEach(this::setDeployedIssue);
-    }
-
-    private void setDeployedIssue(Issue issue) {
+    public void setDeployed(Issue issue) {
         var client = getClient().getIssueClient();
         try {
             var i = client.getIssue(issue.getId()).get();
-            var labels = i.getLabels();
-            var labelMatch = labels.stream().anyMatch(l -> l.equals(config.getIssues().getLabelDeployed()));
-            var issueNeedUpdate = false;
-//            if (issue.isMergeLocalSuccess() && !labelMatch) {
-//                labels.add(config.getIssues().getLabelDeployed());
-//                issueNeedUpdate = true;
-//            } else if (!issue.isMergeLocalSuccess() && labelMatch) {
-//                labels.remove(config.getIssues().getLabelDeployed());
-//                issueNeedUpdate = true;
-//            }
-            if (!labelMatch) {
-                labels.add(config.getIssues().getLabelDeployed());
-                issueNeedUpdate = true;
+            var labels = Set.copyOf(i.getLabels()).stream()
+                    .filter(l-> l.equals(config.getIssues().getLabelDeploymentSuccessful()) || l.equals(config.getIssues().getLabelDeploymentFailed()))
+                    .collect(Collectors.toSet());
+            if (issue.isMergeLocalSuccess()) {
+                labels.add(config.getIssues().getLabelDeploymentSuccessful());
+            } else {
+                labels.add(config.getIssues().getLabelDeploymentFailed());
             }
-            if (issueNeedUpdate) {
+            if (i.getLabels().size() != labels.size() || !i.getLabels().containsAll(labels)) {
                 var ib = new IssueInputBuilder();
                 ib.setFieldValue(IssueFieldId.LABELS_FIELD.id, labels);
-                ib.setFieldValue(IssueFieldId.LABELS_FIELD.id, labels);
                 getClient().getIssueClient().updateIssue(issue.getId(), ib.build()).get();
-                log.debug("Label updated: {} - {}", issue.getId(), labels);
+                log.trace("Label updated: {} - {}", issue.getId(), labels);
+                issue.setIssueUpdated(true);
             }
         } catch (ExecutionException | InterruptedException e) {
             log.error("Exception: ", e);
@@ -106,7 +95,7 @@ public class JiraTaskTracker implements TaskTracker {
                     .uri(String.format("%s/browse/%s", config.getHost(), i.getKey()))
                     .author(a)
                     .pullRequests(prs)
-                    .taskTrackerClazz(this.getClass()).taskTracker(this)
+                    .taskTrackerClassName(this.getClass().getName())
                     .build();
             listIssues.add(issue);
         });

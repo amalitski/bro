@@ -7,5 +7,5 @@ public interface TaskTracker {
 
     public boolean isEnabled();
 
-    public void setDeployed(List<Issue> issues);
+    public void setDeployed(Issue issue);
 }

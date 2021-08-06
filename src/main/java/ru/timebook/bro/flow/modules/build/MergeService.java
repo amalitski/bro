@@ -15,6 +15,7 @@ import ru.timebook.bro.flow.utils.DateTimeUtil;
 import ru.timebook.bro.flow.utils.JsonUtil;
 import ru.timebook.bro.flow.utils.StringUtil;
 
+import javax.swing.text.html.Option;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
@@ -52,10 +53,11 @@ public class MergeService {
         });
     }
 
-    public List<Build> checkJob() {
-        var builds = buildRepository.findFirstByProcessingJob(PageRequest.of(0, 5, Sort.by("startAt").descending()), DateTimeUtil.duration("PT-120H"));
+    public Optional<Build> checkJob() {
+        // Only last build
+        var builds = buildRepository.findFirstByProcessingJob(PageRequest.of(0, 1, Sort.by("startAt").descending()), DateTimeUtil.duration("PT-100H30M"));
         if (builds.isEmpty()) {
-            return List.of();
+            return Optional.empty();
         }
         return builds.stream().filter(b -> {
             var c = b.getBuildHasProjects().stream().filter(bp -> Objects.nonNull(bp.getJobId())).filter(bp -> {
@@ -65,20 +67,38 @@ public class MergeService {
                     return false;
                 }
                 var s = status.get();
+                var hasSuccess = s.equals("success");
                 try {
                     var m = JsonUtil.deserialize(bp.getMergesJson(), Merge.class);
                     m.getPush().getDeploy().setJobStatus(s);
                     bp.setMergesJson(JsonUtil.serialize(m));
+
                 } catch (IOException e) {
                     log.error("Catch exception", e);
                 }
                 bp.setJobStatus(s);
                 buildHasProjectRepository.save(bp);
+
+                try {
+                    var issues = List.of(JsonUtil.deserialize(b.getIssuesJson(), Issue[].class));
+                    issues.forEach(i -> {
+                        i.getPullRequests().stream().filter(pr -> pr.getProjectName() != null).forEach(pr -> {
+                            if (pr.getProjectName().equals(p.getName())) {
+                                pr.setDeployedStatus(s);
+                            }
+                        });
+                    });
+                    b.setIssuesJson(JsonUtil.serialize(issues));
+                    buildRepository.save(b);
+                } catch (IOException e) {
+                    log.error("Catch exception", e);
+                }
+
                 log.trace("Job#{}#{} set status {}", bp.getJobId(), p.getName(), bp.getJobStatus());
-                return true;
+                return hasSuccess;
             }).count();
             return c > 0;
-        }).collect(Collectors.toList());
+        }).findFirst();
     }
 
     public void clean() {

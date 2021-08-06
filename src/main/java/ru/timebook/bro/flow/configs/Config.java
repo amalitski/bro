@@ -95,7 +95,8 @@ public class Config {
             @Data
             public static class Issues {
                 private String mergeJQL;
-                private String labelDeployed;
+                private String labelDeploymentSuccessful;
+                private String labelDeploymentFailed;
             }
         }
     }

@@ -2,20 +2,24 @@ package ru.timebook.bro.flow;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
-import org.gitlab4j.api.GitLabApiException;
-import org.gitlab4j.api.models.PipelineFilter;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.util.Assert;
 import ru.timebook.bro.flow.configs.Config;
 import ru.timebook.bro.flow.modules.build.BuildHasProjectRepository;
 import ru.timebook.bro.flow.modules.build.BuildRepository;
 import ru.timebook.bro.flow.modules.build.ExecutionService;
+import ru.timebook.bro.flow.modules.build.MergeService;
 import ru.timebook.bro.flow.modules.git.GitlabGitRepository;
+import ru.timebook.bro.flow.modules.taskTracker.Issue;
+import ru.timebook.bro.flow.modules.taskTracker.TaskTracker;
+import ru.timebook.bro.flow.utils.DateTimeUtil;
+import ru.timebook.bro.flow.utils.JsonUtil;
+
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Invocation;
@@ -26,8 +30,6 @@ import java.io.FileFilter;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
 
 @Slf4j
 @SpringBootTest
@@ -40,9 +42,14 @@ public class ExecutionServiceIntegrationTest {
     @Autowired
     private Config config;
     @Autowired
+    private MergeService mergeService;
+    @Autowired
     private BuildRepository buildRepository;
     @Autowired
     private BuildHasProjectRepository buildHasProjectRepository;
+    @Autowired
+    private List<TaskTracker> taskTrackers;
+
     @Test
     @Disabled
     void middlewareTest() throws Exception {

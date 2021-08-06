@@ -68,7 +68,7 @@ public class RedmineTaskTracker implements TaskTracker {
     }
 
     @Override
-    public void setDeployed(List<Issue> issues) {
+    public void setDeployed(Issue issue) {
         // todo
     }
 
@@ -102,9 +102,8 @@ public class RedmineTaskTracker implements TaskTracker {
                         .id(String.valueOf(i.getId()))
                         .uri(String.format("%s/issues/%s", config.getHost(), i.getId()))
                         .subject(i.getSubject())
-                        .taskTracker(this)
                         .author(a)
-                        .taskTrackerClazz(this.getClass());
+                        .taskTrackerClassName(this.getClass().getName());
                 for (var f : i.getCustomFields()) {
                     if (customFieldsIds.contains(String.valueOf(f.getId()))) {
                         var pr = Issue.PullRequest.builder().uri(f.getValue()).name(f.getName()).build();
