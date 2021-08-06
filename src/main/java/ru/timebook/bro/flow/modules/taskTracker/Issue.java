@@ -23,16 +23,20 @@ public class Issue {
 
     @JsonIgnore
     public boolean isMergeLocalSuccess() {
-        return this.pullRequests.stream().filter(p -> p.getBranch() != null).allMatch(p -> p.getBranch().isMergeLocalSuccess() || p.getMerged());
+        return this.pullRequests.stream().filter(p -> p.getBranch() != null).allMatch(p -> p.getBranch().isMergeLocalSuccess());
+    }
+
+    @JsonIgnore
+    public boolean isDeployedSuccessful() {
+        return this.pullRequests.stream().filter(p -> p.getUri() != null).allMatch(p -> p.getDeployedStatus() != null && p.getDeployedStatus().equals("success"));
     }
 
     @Singular
     private List<PullRequest> pullRequests;
 
-    @JsonIgnore
-    private TaskTracker taskTracker;
-    @JsonIgnore
-    private Class<? extends TaskTracker> taskTrackerClazz;
+    private String taskTrackerClassName;
+
+    private boolean issueUpdated;
 
     @Data
     @Builder
@@ -69,6 +73,7 @@ public class Issue {
         private String projectName;
         private String httpUrlRepo;
         private String sshUrlRepo;
+        private String deployedStatus;
         private Merge.Branch branch;
         @JsonIgnore
         private GitRepository gitRepositoryClazz;

@@ -2,7 +2,6 @@ package ru.timebook.bro.flow.modules.git;
 
 import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
-import org.gitlab4j.api.Constants;
 import org.gitlab4j.api.GitLabApi;
 import org.gitlab4j.api.GitLabApiException;
 import org.gitlab4j.api.ProxyClientConfig;
@@ -34,7 +33,7 @@ public class GitlabGitRepository implements GitRepository {
 
     @Override
     public void getInfo(List<Issue> issues) {
-        issues.forEach(i -> {
+        issues.parallelStream().forEach(i -> {
             i.getPullRequests().forEach(this::getPullRequestInfo);
         });
         log.trace("Issues information loaded");

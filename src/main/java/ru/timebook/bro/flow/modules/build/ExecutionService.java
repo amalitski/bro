@@ -4,17 +4,15 @@ import com.google.common.base.Stopwatch;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import ru.timebook.bro.flow.configs.Config;
 import ru.timebook.bro.flow.modules.git.GitRepository;
 import ru.timebook.bro.flow.modules.taskTracker.Issue;
 import ru.timebook.bro.flow.modules.taskTracker.TaskTracker;
 import ru.timebook.bro.flow.modules.git.Merge;
-import ru.timebook.bro.flow.utils.DateTimeUtil;
 import ru.timebook.bro.flow.utils.JsonUtil;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -73,8 +71,25 @@ public class ExecutionService {
     }
 
     public void checkJobAndUpdateIssue() {
-        mergeService.checkJob();
-//        log.info("{}", b.size());
+        var build = mergeService.checkJob();
+        if (build.isEmpty()) {
+            return;
+        }
+        var b = build.get();
+        try {
+            var issues = List.of(JsonUtil.deserialize(b.getIssuesJson(), Issue[].class));
+            issues.stream().filter(i -> i.isDeployedSuccessful() && !i.isIssueUpdated()).forEach(i -> {
+                taskTrackers.forEach(t -> {
+                    if (i.getTaskTrackerClassName().equals(t.getClass().getName())) {
+                        t.setDeployed(i);
+                    }
+                });
+            });
+            b.setIssuesJson(JsonUtil.serialize(issues));
+            buildRepository.save(b);
+        } catch (IOException e) {
+            log.error("Deserialize issues catch exception", e);
+        }
     }
 
     private void createBuild(List<Issue> issues, List<Merge> merges) {
@@ -100,15 +115,6 @@ public class ExecutionService {
         }).filter(Objects::nonNull).collect(Collectors.toList());
         buildHasProjectRepository.saveAll(buildHasProjects);
         log.trace("Build saved. Id: {}, buildHasProjects.size(): {}", b.getId(), buildHasProjects.size());
-    }
-
-    public void setDeployed(List<Issue> issues) {
-        Map<Class<? extends TaskTracker>, List<Issue>> trGroup = issues.stream().collect(Collectors.groupingBy(Issue::getTaskTrackerClazz));
-        trGroup.forEach((k, v) -> {
-            taskTrackers.stream()
-                    .filter(e -> e.getClass().getName().equals(k.getName()))
-                    .forEach(i -> i.setDeployed(v));
-        });
     }
 
     public String getOut(List<Issue> issues, List<Merge> merges) {

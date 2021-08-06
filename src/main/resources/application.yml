@@ -12,7 +12,7 @@ bro:
       deploy:
         jobName: Deploy to Stage (example)
       git:
-        cronReceive: "*/1 * * * * ?"
+        cronReceive: "0 */1 * * * ?"
         userName: Bender Rodriguez
         userEmail: bender@company.com
       temp:
@@ -45,7 +45,8 @@ bro:
         apiToken: API_TOKEN
         issues:
           mergeJQL: "'Stage[Select List (multiple choices)]'=${bro.flow.stage.name} AND statusCategory IN ('In Progress')"
-          labelDeployed: deployed
+          label-deployment-failed: DeploymentFailed
+          label-deployment-successful: DeploymentSuccessful
         enabled: true
     repositories:
       gitlab:
