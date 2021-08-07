@@ -15,12 +15,12 @@ import ru.timebook.bro.flow.utils.DateTimeUtil;
 import ru.timebook.bro.flow.utils.JsonUtil;
 import ru.timebook.bro.flow.utils.StringUtil;
 
-import javax.swing.text.html.Option;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -53,52 +53,76 @@ public class MergeService {
         });
     }
 
-    public Optional<Build> checkJob() {
-        // Only last build
-        var builds = buildRepository.findFirstByProcessingJob(PageRequest.of(0, 1, Sort.by("startAt").descending()), DateTimeUtil.duration("PT-100H30M"));
+    public boolean needUpdate(List<Merge> merges, List<Issue> issues) {
+        return merges.parallelStream().anyMatch(m -> {
+            var build = getLastBuild(DateTimeUtil.duration("P-1D"));
+            return build.isEmpty() || !build.get().getHash().equals(getBuildHash(merges, issues));
+        });
+    }
+
+    public String getBuildHash(List<Merge> merges, List<Issue> issues) {
+        var g = merges.stream()
+                .map(Merge::getCheckSum)
+                .sorted(Comparator.comparing(String::toString))
+                .collect(Collectors.joining(","));
+        var i = issues.stream()
+                .map(Issue::getId)
+                .sorted(Comparator.comparing(String::toString))
+                .collect(Collectors.joining(","));
+        String source = g + i;
+        return DigestUtils.md5DigestAsHex(source.getBytes());
+    }
+
+    private Optional<Build> getLastBuild(LocalDateTime date) {
+        var builds = buildRepository.findFirstByProcessingJob(PageRequest.of(0, 1, Sort.by("startAt").descending()), date);
         if (builds.isEmpty()) {
             return Optional.empty();
         }
-        return builds.stream().filter(b -> {
-            var c = b.getBuildHasProjects().stream().filter(bp -> Objects.nonNull(bp.getJobId())).filter(bp -> {
-                var p = bp.getProject();
-                var status = gitlabGitRepository.getJobStatus(p.getName(), bp.getJobId());
-                if (status.isEmpty() || status.get().equals(bp.getJobStatus())) {
-                    return false;
-                }
-                var s = status.get();
-                var hasSuccess = s.equals("success");
-                try {
-                    var m = JsonUtil.deserialize(bp.getMergesJson(), Merge.class);
-                    m.getPush().getDeploy().setJobStatus(s);
-                    bp.setMergesJson(JsonUtil.serialize(m));
+        return Optional.of(builds.get(0));
+    }
 
-                } catch (IOException e) {
-                    log.error("Catch exception", e);
-                }
-                bp.setJobStatus(s);
-                buildHasProjectRepository.save(bp);
+    public Optional<Build> checkJob() {
+        var build = getLastBuild(DateTimeUtil.duration("PT-1H30M"));
+        if (build.isEmpty()) {
+            return Optional.empty();
+        }
+        var b = build.get();
+        var exists = b.getBuildHasProjects().stream().filter(bp -> Objects.nonNull(bp.getJobId())).anyMatch(bp -> {
+            var p = bp.getProject();
+            var status = gitlabGitRepository.getJobStatus(p.getName(), bp.getJobId());
+            if (status.isEmpty() || status.get().equals(bp.getJobStatus())) {
+                return false;
+            }
+            var s = status.get();
+            var hasSuccess = s.equals("success");
+            try {
+                var m = JsonUtil.deserialize(bp.getMergesJson(), Merge.class);
+                m.getPush().getDeploy().setJobStatus(s);
+                bp.setMergesJson(JsonUtil.serialize(m));
 
-                try {
-                    var issues = List.of(JsonUtil.deserialize(b.getIssuesJson(), Issue[].class));
-                    issues.forEach(i -> {
-                        i.getPullRequests().stream().filter(pr -> pr.getProjectName() != null).forEach(pr -> {
-                            if (pr.getProjectName().equals(p.getName())) {
-                                pr.setDeployedStatus(s);
-                            }
-                        });
+            } catch (IOException e) {
+                log.error("Catch exception", e);
+            }
+            bp.setJobStatus(s);
+            buildHasProjectRepository.save(bp);
+
+            try {
+                var issues = List.of(JsonUtil.deserialize(b.getIssuesJson(), Issue[].class));
+                issues.forEach(i -> {
+                    i.getPullRequests().stream().filter(pr -> pr.getProjectName() != null).forEach(pr -> {
+                        if (pr.getProjectName().equals(p.getName())) {
+                            pr.setDeployedStatus(s);
+                        }
                     });
-                    b.setIssuesJson(JsonUtil.serialize(issues));
-                    buildRepository.save(b);
-                } catch (IOException e) {
-                    log.error("Catch exception", e);
-                }
-
-                log.trace("Job#{}#{} set status {}", bp.getJobId(), p.getName(), bp.getJobStatus());
-                return hasSuccess;
-            }).count();
-            return c > 0;
-        }).findFirst();
+                });
+                b.setIssuesJson(JsonUtil.serialize(issues));
+                buildRepository.save(b);
+            } catch (IOException e) {
+                log.error("Catch exception", e);
+            }
+            return hasSuccess;
+        });
+        return exists ? Optional.of(b) : Optional.empty();
     }
 
     public void clean() {
@@ -166,7 +190,7 @@ public class MergeService {
         }
         var project = projectRepository.findByName(merge.getProjectName());
         var cmd = config.getStage().getPushCmd();
-        if (project.isPresent() && project.get().getBuildCheckSum() != null && project.get().getBuildCheckSum().equals(merge.getCheckSum())) {
+        if (!merge.isNeedForcePush() && project.isPresent() && project.get().getBuildCheckSum() != null && project.get().getBuildCheckSum().equals(merge.getCheckSum())) {
             log.trace("Push skipped. Project '{}', cmd: '{}', checksum equal {}", merge.getProjectName(), cmd, project.get().getBuildCheckSum());
             return;
         }
@@ -260,8 +284,6 @@ public class MergeService {
         FileUtils.copyDirectory(dirInit, dirRepo);
         mergeRecursive(merge, dirRepo);
 
-        var log = exec("git log -25 --pretty=format:'%cd \\t %an : %s'", dirRepo);
-        merge.setLog(log.get("stdout"));
         var restCheckSum = exec("git log -1000 --pretty=format:\"%s\"", dirRepo);
         if (!restCheckSum.get("code").equals("0")) {
             var msg = String.format("Calculate checksum with error. Cmd '%s' dir %s", restCheckSum.get("cmd"), dirRepo);
@@ -269,9 +291,6 @@ public class MergeService {
         }
         var checkSum = DigestUtils.md5DigestAsHex(restCheckSum.get("stdout").getBytes(StandardCharsets.UTF_8));
         merge.setCheckSum(checkSum);
-
-        var lastCommit = exec("git log -1 --pretty=%H", dirRepo);
-        merge.setLastCommitSha(lastCommit.get("stdout").trim());
     }
 
     private boolean mergeRecursive(Merge merge, File dirRepo) throws IOException {

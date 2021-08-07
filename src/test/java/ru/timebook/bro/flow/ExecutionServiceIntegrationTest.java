@@ -6,8 +6,6 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.util.Assert;
 import ru.timebook.bro.flow.configs.Config;
 import ru.timebook.bro.flow.modules.build.BuildHasProjectRepository;
@@ -15,10 +13,7 @@ import ru.timebook.bro.flow.modules.build.BuildRepository;
 import ru.timebook.bro.flow.modules.build.ExecutionService;
 import ru.timebook.bro.flow.modules.build.MergeService;
 import ru.timebook.bro.flow.modules.git.GitlabGitRepository;
-import ru.timebook.bro.flow.modules.taskTracker.Issue;
 import ru.timebook.bro.flow.modules.taskTracker.TaskTracker;
-import ru.timebook.bro.flow.utils.DateTimeUtil;
-import ru.timebook.bro.flow.utils.JsonUtil;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
@@ -49,16 +44,6 @@ public class ExecutionServiceIntegrationTest {
     private BuildHasProjectRepository buildHasProjectRepository;
     @Autowired
     private List<TaskTracker> taskTrackers;
-
-    @Test
-    @Disabled
-    void middlewareTest() throws Exception {
-        var response = executionService.mergeAndPush();
-//        executionService.setDeployed(response.getIssues());
-
-        var out = executionService.getOut(response.getIssues(), response.getMerges());
-        log.info(out);
-    }
 
     @Test
     void httpsTest() {
@@ -109,7 +94,6 @@ public class ExecutionServiceIntegrationTest {
         }
         return List.of(directories);
     }
-
 
     @Test
     void gitlabAvatarUriRepoTest() {

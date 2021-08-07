@@ -25,8 +25,9 @@ public class FlowSchedule {
     @Async
     @Scheduled(cron = "${bro.flow.stage.cronReceive}")
     public void refreshIssues() {
+
         try {
-            if (lockMerge.tryAcquire(15, TimeUnit.MINUTES)) {
+            if (executionService.validate() && lockMerge.tryAcquire(15, TimeUnit.MINUTES)) {
                 executionService.mergeAndPush();
             }
         } catch (Exception e) {

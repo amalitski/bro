@@ -20,8 +20,10 @@ public class Build {
     @OneToMany(mappedBy = "build", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<BuildHasProject> buildHasProjects;
     @Lob
-    @Column
+    @Column(nullable = false)
     private String issuesJson;
+    @Column(nullable = false)
+    private String hash;
     @Column(nullable = false)
     private LocalDateTime startAt;
     @Column

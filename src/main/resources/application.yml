@@ -55,7 +55,7 @@ bro:
         proxy:
         enableRequestLogging: false
         enabled: true
-        timeout: 30000
+        timeout: 60000
 logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} %clr([%15.15t]){faint} %clr(${LOG_LEVEL_PATTERN:%5p}) %msg%n"

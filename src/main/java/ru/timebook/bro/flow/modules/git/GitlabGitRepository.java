@@ -163,6 +163,7 @@ public class GitlabGitRepository implements GitRepository {
                 .httpUrlRepo(pr.getHttpUrlRepo())
                 .sshUrlRepo(pr.getSshUrlRepo())
                 .push(Merge.Push.builder().deploy(Merge.Push.Deploy.builder().build()).build())
+                .needForcePush(true)
                 .build();
     }
 

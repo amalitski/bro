@@ -26,12 +26,6 @@ public class BuildHasProject {
     @JoinColumn(name = "projectId", nullable = false)
     private Project project;
 
-    @Column(nullable = true)
-    private String mergeCheckSum;
-
-    @Column
-    private String lastCommitSha;
-
     @Column
     private Integer jobId;
 
