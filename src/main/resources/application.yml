@@ -90,7 +90,7 @@ spring:
     template:
       check-template-location: false
   aop:
-    auto: true
+    auto: false
     proxy-target-class: false
 server:
   tomcat:

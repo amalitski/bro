@@ -109,17 +109,20 @@ public class GitlabGitRepository implements GitRepository {
     }
 
     public String getCommitterAvatarUri(String email) {
-        return BufferUtil.key(email, () -> {
-            log.trace("Request avatar_uri: {}", email);
-            RestTemplate restTemplate = new RestTemplate();
-            var result = restTemplate
-                    .getForObject(String.format("%s/api/v4/avatar?email=%s&size=50", config.getHost(), email), HashMap.class);
-            assert result != null;
-            if (result.containsKey("avatar_url")) {
-                return result.get("avatar_url").toString();
-            }
-            return "";
-        });
+        var key = "avatar" + email;
+        var ava = (Optional<String>) cacheService.get(key);
+        if (ava.isPresent()) {
+            return ava.get();
+        }
+        RestTemplate restTemplate = new RestTemplate();
+        var result = restTemplate
+                .getForObject(String.format("%s/api/v4/avatar?email=%s&size=50", config.getHost(), email), HashMap.class);
+        if (result != null && result.containsKey("avatar_url")) {
+            var a = result.get("avatar_url").toString();
+            cacheService.set(key, a, 24 * 60 * 60);
+            return a;
+        }
+        return "";
     }
 
     public List<Merge> getMerge(List<Issue> issues) {
@@ -247,10 +250,10 @@ public class GitlabGitRepository implements GitRepository {
             var pr = (Optional<Project>) cacheService.get(projectName);
             if (pr.isEmpty()) {
                 var p = getApi().getProjectApi().getProject(projectName);
-                cacheService.set(projectName, p, 60*60);
+                if (p != null) {
+                    cacheService.set(projectName, p, 60 * 60);
+                }
                 return p;
-            } else {
-                log.warn("FROM cache: {}", projectName);
             }
             return pr.get();
         } catch (GitLabApiException e) {
