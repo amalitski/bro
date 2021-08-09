@@ -5,12 +5,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.gitlab4j.api.GitLabApi;
 import org.gitlab4j.api.GitLabApiException;
 import org.gitlab4j.api.ProxyClientConfig;
+import org.gitlab4j.api.models.Job;
+import org.gitlab4j.api.models.MergeRequest;
 import org.gitlab4j.api.models.PipelineFilter;
+import org.gitlab4j.api.models.Project;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 import org.springframework.web.client.RestTemplate;
+import ru.timebook.bro.flow.exceptions.FlowRuntimeException;
 import ru.timebook.bro.flow.configs.Config;
 import ru.timebook.bro.flow.modules.taskTracker.Issue;
+import ru.timebook.bro.flow.services.CacheService;
 import ru.timebook.bro.flow.utils.BufferUtil;
 
 import java.nio.charset.StandardCharsets;
@@ -25,10 +30,12 @@ public class GitlabGitRepository implements GitRepository {
     private final Config.Repositories.Gitlab config;
     private final Config.Stage configStage;
     private GitLabApi gitLabApi;
+    private CacheService cacheService;
 
-    public GitlabGitRepository(Config config) {
+    public GitlabGitRepository(Config config, CacheService cacheService) {
         this.config = config.getRepositories().getGitlab();
         this.configStage = config.getStage();
+        this.cacheService = cacheService;
     }
 
     @Override
@@ -43,41 +50,43 @@ public class GitlabGitRepository implements GitRepository {
         if (pullRequest.getUri().trim().length() <= 8) {
             return;
         }
-        var api = getApi();
         try {
             var prInfo = getPullRequestInfo(pullRequest.getUri());
             var mergeRequestId = Integer.parseInt(prInfo.get("id"));
             var projectName = prInfo.get("project");
-            var project = api.getProjectApi().getProject(projectName);
-            var mergeRequest = api.getMergeRequestApi().getMergeRequest(projectName, mergeRequestId);
+            var project = getProject(projectName);
+            var mergeRequest = getMergeRequest(projectName, mergeRequestId);
             pullRequest.setProjectName(projectName);
             pullRequest.setHttpUrlRepo(project.getHttpUrlToRepo());
             pullRequest.setSshUrlRepo(project.getSshUrlToRepo());
             pullRequest.setSourceBranchName(mergeRequest.getSourceBranch());
             pullRequest.setTargetBranchName(mergeRequest.getTargetBranch());
             pullRequest.setMerged(mergeRequest.getState().equals("merged"));
-        } catch (Exception e) {
-            log.error("Catch exception", e);
+        } catch (IllegalArgumentException e) {
+            pullRequest.setIncorrectUri(true);
+            log.warn("Incorrect uri", e);
         }
     }
 
     public GitLabApi getApi() {
         if (gitLabApi == null) {
-            if (!config.getProxy().isEmpty()) {
-                Map<String, Object> proxyConfig = ProxyClientConfig.createProxyClientConfig(config.getProxy());
-                gitLabApi = new GitLabApi(config.getHost(), config.getToken(), null, proxyConfig);
-            } else {
-                gitLabApi = new GitLabApi(config.getHost(), config.getToken());
-            }
-            gitLabApi.setRequestTimeout(config.getTimeout(), config.getTimeout());
-            if (config.isEnableRequestLogging()) {
-                gitLabApi.enableRequestResponseLogging();
+            synchronized (GitlabGitRepository.class) {
+                if (!config.getProxy().isEmpty()) {
+                    Map<String, Object> proxyConfig = ProxyClientConfig.createProxyClientConfig(config.getProxy());
+                    gitLabApi = new GitLabApi(config.getHost(), config.getToken(), null, proxyConfig);
+                } else {
+                    gitLabApi = new GitLabApi(config.getHost(), config.getToken());
+                }
+                gitLabApi.setRequestTimeout(config.getTimeout(), config.getTimeout());
+                if (config.isEnableRequestLogging()) {
+                    gitLabApi.enableRequestResponseLogging();
+                }
             }
         }
         return gitLabApi;
     }
 
-    private HashMap<String, String> getPullRequestInfo(String prUri) throws Exception {
+    private HashMap<String, String> getPullRequestInfo(String prUri) throws IllegalArgumentException {
         var map = new HashMap<String, String>();
         var reg = Lists.newArrayList(
                 "(?:://)(?<host>[^/]+)/(?<project>.+)/-/merge_requests/(?<id>[0-9]+)",
@@ -92,7 +101,7 @@ public class GitlabGitRepository implements GitRepository {
                 return map;
             }
         }
-        throw new Exception("Project name not found in uri: " + prUri);
+        throw new IllegalArgumentException("Project name not found in uri: " + prUri);
     }
 
     public boolean isEnabled() {
@@ -167,25 +176,21 @@ public class GitlabGitRepository implements GitRepository {
                 .build();
     }
 
-    private Merge getMergeByRepo(Config.Repositories.Gitlab.Repository repo) {
+    private Merge getMergeByRepo(Config.Repositories.Gitlab.Repository repo) throws FlowRuntimeException {
         var merge = Merge.builder();
-        try {
-            var project = getApi().getProjectApi().getProject(repo.getPath());
-            merge
-                    .branches(repo.getPreMerge().stream().map(v -> Merge.Branch.builder()
-                            .branchName(v)
-                            .targetBranchName(v)
-                            .merged(true).build()).collect(Collectors.toList()))
-                    .projectId(DigestUtils.md5DigestAsHex(repo.getPath().getBytes(StandardCharsets.UTF_8)))
-                    .projectName(repo.getPath())
-                    .projectSafeName(repo.getPath().replaceAll("[^A-Za-z0-9\\-_.]", "."))
-                    .projectShortName(repo.getPath().substring(0, 1).toUpperCase())
-                    .httpUrlRepo(project.getHttpUrlToRepo())
-                    .sshUrlRepo(project.getSshUrlToRepo())
-                    .push(Merge.Push.builder().deploy(Merge.Push.Deploy.builder().build()).build());
-        } catch (Exception e) {
-            log.error("Catch exception", e);
-        }
+        var project = getProject(repo.getPath());
+        merge
+                .branches(repo.getPreMerge().stream().map(v -> Merge.Branch.builder()
+                        .branchName(v)
+                        .targetBranchName(v)
+                        .merged(true).build()).collect(Collectors.toList()))
+                .projectId(DigestUtils.md5DigestAsHex(repo.getPath().getBytes(StandardCharsets.UTF_8)))
+                .projectName(repo.getPath())
+                .projectSafeName(repo.getPath().replaceAll("[^A-Za-z0-9\\-_.]", "."))
+                .projectShortName(repo.getPath().substring(0, 1).toUpperCase())
+                .httpUrlRepo(project.getHttpUrlToRepo())
+                .sshUrlRepo(project.getSshUrlToRepo())
+                .push(Merge.Push.builder().deploy(Merge.Push.Deploy.builder().build()).build());
         return merge.build();
     }
 
@@ -196,44 +201,70 @@ public class GitlabGitRepository implements GitRepository {
         return config.getRepositories().stream().filter(r -> r.getPath().equals(projectName)).findFirst();
     }
 
-    public Optional<String> getJobStatus(String projectName, Integer jobId) {
+    public Optional<String> getJobStatus(String projectName, Integer jobId) throws FlowRuntimeException {
         var api = getApi();
         try {
             var j = api.getJobApi().getJob(projectName, jobId);
             return Optional.of(j.getStatus().name().toLowerCase());
         } catch (GitLabApiException e) {
-            log.error("Find job return Exception", e);
+            throw new FlowRuntimeException(e);
         }
-        return Optional.empty();
     }
 
-    public Merge.Push.Deploy getDeploy(String projectName, String ref) {
+    public Merge.Push.Deploy getDeploy(String projectName, String ref) throws FlowRuntimeException {
         var api = getApi();
         var p = new PipelineFilter();
         p.setRef(ref);
         try {
             return api.getPipelineApi().getPipelines(projectName, p).stream().map(pp -> {
-                try {
-                    var job = api.getJobApi().getJobsForPipeline(projectName, pp.getId()).stream()
-                            .filter(jj -> jj.getName().equals(configStage.getDeploy().getJobName())).findFirst();
-                    if (job.isPresent()) {
-                        var j = job.get();
-                        return Merge.Push.Deploy.builder()
-                                .commitSha(j.getCommit().getId())
-                                .jobId(j.getId())
-                                .jobStatus(j.getStatus().name().toLowerCase())
-                                .pipelineId(j.getPipeline().getId())
-                                .pipelineUri(j.getPipeline().getWebUrl()).build();
-                    }
-                } catch (GitLabApiException e) {
-                    log.error("Find job for deploy to stage return Exception", e);
-                }
-                return null;
+                var job = getDeployJobByPipeline(projectName, pp.getId());
+                return job.map(value -> Merge.Push.Deploy.builder()
+                        .commitSha(value.getCommit().getId())
+                        .jobId(value.getId())
+                        .jobStatus(value.getStatus().name().toLowerCase())
+                        .pipelineId(value.getPipeline().getId())
+                        .pipelineUri(value.getPipeline().getWebUrl()).build()).orElse(null);
             }).filter(Objects::nonNull).findFirst().orElse(Merge.Push.Deploy.builder().build());
         } catch (GitLabApiException e) {
-            log.error("Find job for deploy to stage return Exception", e);
+            log.error("Find job for deploy to stage ({} {}) return Exception", projectName, ref);
+            throw new FlowRuntimeException(e);
         }
-        return Merge.Push.Deploy.builder().build();
+    }
+
+    private Optional<Job> getDeployJobByPipeline(String projectName, Integer pipelineId) throws FlowRuntimeException {
+        try {
+            return getApi().getJobApi().getJobsForPipeline(projectName, pipelineId)
+                    .stream()
+                    .filter(jj -> jj.getName().equals(configStage.getDeploy().getJobName())).findFirst();
+        } catch (GitLabApiException e) {
+            log.error("Request to Job ({} {}) return exception", projectName, pipelineId);
+            throw new FlowRuntimeException(e);
+        }
+    }
+
+    private Project getProject(String projectName) throws FlowRuntimeException {
+        try {
+            var pr = (Optional<Project>) cacheService.get(projectName);
+            if (pr.isEmpty()) {
+                var p = getApi().getProjectApi().getProject(projectName);
+                cacheService.set(projectName, p, 60*60);
+                return p;
+            } else {
+                log.warn("FROM cache: {}", projectName);
+            }
+            return pr.get();
+        } catch (GitLabApiException e) {
+            log.error("Request to Project ({}) return exception", projectName);
+            throw new FlowRuntimeException(e);
+        }
+    }
+
+    private MergeRequest getMergeRequest(String projectName, Integer mrId) throws FlowRuntimeException {
+        try {
+            return getApi().getMergeRequestApi().getMergeRequest(projectName, mrId);
+        } catch (GitLabApiException e) {
+            log.error("Request to Merge ({} {}) return exception", projectName, mrId);
+            throw new FlowRuntimeException(e);
+        }
     }
 }
-

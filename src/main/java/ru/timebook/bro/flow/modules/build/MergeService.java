@@ -8,6 +8,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 import ru.timebook.bro.flow.configs.Config;
+import ru.timebook.bro.flow.exceptions.FlowRuntimeException;
 import ru.timebook.bro.flow.modules.git.GitlabGitRepository;
 import ru.timebook.bro.flow.modules.taskTracker.Issue;
 import ru.timebook.bro.flow.modules.git.Merge;
@@ -44,12 +45,8 @@ public class MergeService {
 
     public void merge(List<Merge> merges) {
         merges.parallelStream().forEach(merge -> {
-            try {
-                initRepo(merge);
-                mergeRepo(merge);
-            } catch (Exception e) {
-                log.error("Merge exception", e);
-            }
+            initRepo(merge);
+            mergeRepo(merge);
         });
     }
 
@@ -161,17 +158,13 @@ public class MergeService {
         });
     }
 
-    public void push(List<Merge> merges) throws Exception {
+    public void push(List<Merge> merges) {
         merges.parallelStream().forEach(m -> {
             if (!m.getInitSuccess()) {
                 log.error("Skip push command, because init repo with error. See init logs: {}", m.getInitStdout());
                 return;
             }
-            try {
-                pushExec(m);
-            } catch (Exception e) {
-                log.error("Push command return exception", e);
-            }
+            pushExec(m);
         });
     }
 
@@ -184,21 +177,22 @@ public class MergeService {
                 .forEach(m -> m.getPush().setDeploy(gitlabGitRepository.getDeploy(m.getProjectName(), config.getStage().getBranchName())));
     }
 
-    private void pushExec(Merge merge) throws Exception {
-        if (config.getStage().getBranchName().isEmpty() || config.getStage().getPushCmd().isEmpty()) {
-            throw new Exception("Invalid configuration: bro.flow.stage.branchName or bro.flow.stage.pushCmd empty!");
-        }
+    private void pushExec(Merge merge) {
         var project = projectRepository.findByName(merge.getProjectName());
         var cmd = config.getStage().getPushCmd();
         if (!merge.isNeedForcePush() && project.isPresent() && project.get().getBuildCheckSum() != null && project.get().getBuildCheckSum().equals(merge.getCheckSum())) {
             log.trace("Push skipped. Project '{}', cmd: '{}', checksum equal {}", merge.getProjectName(), cmd, project.get().getBuildCheckSum());
             return;
         }
-        var resp = exec(cmd, merge.getDirRepo());
-        merge.getPush().setLog(resp.get("stdout"));
-        merge.getPush().setPushed(resp.get("code").equals("0"));
-        if (merge.getPush().isPushed()) {
-            log.debug("Pushed project {}:{}", merge.getProjectName(), config.getStage().getBranchName());
+        try {
+            var resp = exec(cmd, merge.getDirRepo());
+            merge.getPush().setLog(resp.get("stdout"));
+            merge.getPush().setPushed(resp.get("code").equals("0"));
+            if (merge.getPush().isPushed()) {
+                log.debug("Pushed project {}:{}", merge.getProjectName(), config.getStage().getBranchName());
+            }
+        } catch (IOException e) {
+            throw new FlowRuntimeException(e);
         }
     }
 
@@ -232,26 +226,30 @@ public class MergeService {
 
     }
 
-    private void initRepo(Merge merge) throws Exception {
+    private void initRepo(Merge merge) throws FlowRuntimeException {
         var dirname = getInitDirPath(merge);
         var dir = new File(dirname);
         if (!dir.exists() && !dir.mkdirs()) {
-            throw new Exception("Failed to create init directory: " + dirname);
+            throw new FlowRuntimeException("Failed to create init directory: " + dirname);
         }
         var f = dir.listFiles();
         if (f != null && f.length == 0) {
-            var resp = exec("git clone " + merge.getSshUrlRepo() + " ./", dir);
-            merge.setInitStdout(getOutPretty(resp));
-            merge.setInitCode(resp.get("code"));
-            if (!resp.get("code").equals("0")) {
-                throw new Exception(String.format("Clone %s repository with error. See logs for detail information. ", merge.getSshUrlRepo()));
+            try {
+                var resp = exec("git clone " + merge.getSshUrlRepo() + " ./", dir);
+                merge.setInitStdout(getOutPretty(resp));
+                merge.setInitCode(resp.get("code"));
+                if (!resp.get("code").equals("0")) {
+                    throw new FlowRuntimeException(String.format("Clone %s repository with error. See logs for detail information. ", merge.getSshUrlRepo()));
+                }
+                var cmd = String.format(
+                        "git config user.name %s && git config user.email %s",
+                        config.getStage().getGit().getUserName(),
+                        config.getStage().getGit().getUserEmail()
+                );
+                exec(cmd, dir);
+            } catch (IOException e) {
+                throw new FlowRuntimeException(e);
             }
-            var cmd = String.format(
-                    "git config user.name %s && git config user.email %s",
-                    config.getStage().getGit().getUserName(),
-                    config.getStage().getGit().getUserEmail()
-            );
-            exec(cmd, dir);
         }
     }
 
@@ -259,38 +257,40 @@ public class MergeService {
         return String.format("%s (code %s)%n%s", resp.get("cmd"), resp.get("code"), resp.get("stdout"));
     }
 
-    private void mergeRepo(Merge merge) throws Exception {
+    private void mergeRepo(Merge merge) throws FlowRuntimeException {
         var dirname = getMergeDirPath(merge);
         var dirMerge = new File(dirname);
         var dirRepo = new File(dirname + File.separator + "repo");
         var dirInit = new File(getInitDirPath(merge));
         if (!dirMerge.exists() && !dirMerge.mkdirs()) {
-            throw new Exception("Failed to create merge directory: " + dirname);
+            throw new FlowRuntimeException("Failed to create merge directory: " + dirname);
         } else if (!dirRepo.mkdirs()) {
-            throw new Exception("Failed to create repo directory: " + dirRepo.getPath());
+            throw new FlowRuntimeException("Failed to create repo directory: " + dirRepo.getPath());
         }
         merge.setDirRepo(dirRepo);
         merge.setDirMerge(dirMerge);
-        var respFetch = exec("git fetch origin", dirInit);
-        var out = merge.getInitStdout() == null ?
-                getOutPretty(respFetch) : String.format("%s%n%n%s", merge.getInitStdout(), getOutPretty(respFetch));
-        merge.setInitStdout(out);
-        merge.setInitCode(respFetch.get("code"));
-        if (!respFetch.get("code").equals("0")) {
-            log.error("Git fetch return error. Stdout: {}, Stderr: {}", respFetch.get("stdout"), respFetch.get("stderr"));
-            throw new Exception("Failed to fetch origin: " + dirInit.getPath());
+        try {
+            var respFetch = exec("git fetch origin", dirInit);
+            var out = merge.getInitStdout() == null ?
+                    getOutPretty(respFetch) : String.format("%s%n%n%s", merge.getInitStdout(), getOutPretty(respFetch));
+            merge.setInitStdout(out);
+            merge.setInitCode(respFetch.get("code"));
+            if (!respFetch.get("code").equals("0")) {
+                log.error("Git fetch return error. Stdout: {}, Stderr: {}", respFetch.get("stdout"), respFetch.get("stderr"));
+                throw new FlowRuntimeException("Failed to fetch origin: " + dirInit.getPath());
+            }
+            FileUtils.copyDirectory(dirInit, dirRepo);
+            mergeRecursive(merge, dirRepo);
+            var restCheckSum = exec("git log -1000 --pretty=format:\"%s\"", dirRepo);
+            if (!restCheckSum.get("code").equals("0")) {
+                var msg = String.format("Calculate checksum with error. Cmd '%s' dir %s", restCheckSum.get("cmd"), dirRepo);
+                throw new FlowRuntimeException(msg);
+            }
+            var checkSum = DigestUtils.md5DigestAsHex(restCheckSum.get("stdout").getBytes(StandardCharsets.UTF_8));
+            merge.setCheckSum(checkSum);
+        } catch (IOException e) {
+            throw new FlowRuntimeException(e);
         }
-
-        FileUtils.copyDirectory(dirInit, dirRepo);
-        mergeRecursive(merge, dirRepo);
-
-        var restCheckSum = exec("git log -1000 --pretty=format:\"%s\"", dirRepo);
-        if (!restCheckSum.get("code").equals("0")) {
-            var msg = String.format("Calculate checksum with error. Cmd '%s' dir %s", restCheckSum.get("cmd"), dirRepo);
-            throw new Exception(msg);
-        }
-        var checkSum = DigestUtils.md5DigestAsHex(restCheckSum.get("stdout").getBytes(StandardCharsets.UTF_8));
-        merge.setCheckSum(checkSum);
     }
 
     private boolean mergeRecursive(Merge merge, File dirRepo) throws IOException {
@@ -393,7 +393,6 @@ public class MergeService {
             result.put("stdout", outStr.toString().trim());
             result.put("stderr", errStr.toString().trim());
             result.put("code", String.valueOf(exitCode));
-
         } catch (InterruptedException e) {
             log.error("Exception", e);
             result.put("stdout", e.getMessage());

@@ -13,7 +13,7 @@ import java.util.Optional;
 public interface BuildRepository extends CrudRepository<Build, Long> {
     Optional<Build> findFirstByOrderByStartAtDesc();
 
-    @Query(value = "SELECT b FROM Build b JOIN b.buildHasProjects bp WHERE bp.pushed = true GROUP BY b")
+    @Query(value = "SELECT b FROM Build b JOIN b.buildHasProjects bp WHERE bp.pushed = true GROUP BY b, b.hash")
     List<Build> findAllPushed(Pageable pageable);
 
     @Query(value = """

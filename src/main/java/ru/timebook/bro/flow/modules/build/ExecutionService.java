@@ -66,7 +66,7 @@ public class ExecutionService {
         return errors.isEmpty();
     }
 
-    public void mergeAndPush() throws Exception {
+    public void mergeAndPush() {
         log.debug("Start");
         var timer = Stopwatch.createStarted();
         var issues = new ArrayList<Issue>();

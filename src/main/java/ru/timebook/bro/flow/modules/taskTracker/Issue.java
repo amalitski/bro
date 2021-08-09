@@ -74,6 +74,7 @@ public class Issue {
         private String httpUrlRepo;
         private String sshUrlRepo;
         private String deployedStatus;
+        private boolean incorrectUri;
         private Merge.Branch branch;
         @JsonIgnore
         private GitRepository gitRepositoryClazz;
