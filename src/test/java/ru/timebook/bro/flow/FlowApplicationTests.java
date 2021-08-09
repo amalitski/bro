@@ -2,10 +2,13 @@ package ru.timebook.bro.flow;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.util.Assert;
 import ru.timebook.bro.flow.configs.Config;
 import ru.timebook.bro.flow.utils.DateTimeUtil;
@@ -20,8 +23,10 @@ import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
+
+@ExtendWith(SpringExtension.class)
+@Import({Config.class})
 @SpringBootTest
-@Disabled
 class FlowApplicationTests {
     private final static Logger logger = LoggerFactory.getLogger(FlowApplicationTests.class);
     @Autowired
@@ -39,23 +44,21 @@ class FlowApplicationTests {
     }
 
     @Test
-    void configTest() {
-        Assert.hasText(config.getStage().getBranchName(), config.getStage().getPushCmd());
-    }
-
-    @Test
     void durationDayTest() {
         var duration = Duration.parse(config.getTaskTrackers().getRedmine().getAfterUpdateTime());
         var localDate = ZonedDateTime.now().plusSeconds(duration.getSeconds());
-        logger.info("result: {}", localDate.format(DateTimeFormatter.ofPattern("yyyyMMdd HH:mm Z")));
+        var date = localDate.format(DateTimeFormatter.ofPattern("yyyyMMdd HH:mm Z"));
+        logger.info("result: {}", date);
+        Assert.isTrue(date.length() == 20, "Length equal format");
     }
 
     @Test
     void durationDayTimeTest() {
         var localDate = DateTimeUtil.duration("PT-1H");
-        logger.info("result: {}", localDate.format(DateTimeFormatter.ofPattern("yyyyMMdd HH:mm Z")));
+        var date = localDate.format(DateTimeFormatter.ofPattern("yyyyMMdd HH:mm"));
+        logger.info("result PT-1H: {}", date);
+        Assert.isTrue(date.length() == 14, "Length equal format");
     }
-
 
     @Test
     void gravatarHashTest() {

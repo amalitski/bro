@@ -12,6 +12,7 @@ import ru.timebook.bro.flow.utils.JsonUtil;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -91,7 +92,7 @@ public class FlowService {
                 log.error("Deserialize with exception", e);
             }
             return null;
-        }).collect(Collectors.toList());
+        }).sorted(Comparator.comparing(Merge::getProjectName)).collect(Collectors.toList());
         var lastBuild = getBuild(b.get());
         var builds = buildRepository.findAllPushed(PageRequest.of(0, 5, Sort.by("startAt").descending())).stream()
                 .map(this::getBuild).collect(Collectors.toList());

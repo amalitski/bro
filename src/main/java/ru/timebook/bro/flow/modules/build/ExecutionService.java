@@ -51,7 +51,22 @@ public class ExecutionService {
         this.gitRepositories = gitRepositories.values().stream().filter(GitRepository::isEnabled).collect(Collectors.toList());
     }
 
-    public Response mergeAndPush() throws Exception {
+    public boolean validate(){
+        var errors = new ArrayList<String>();
+        if (config.getStage().getBranchName().isEmpty() || !config.getStage().getBranchName().matches("[^/]+/.+")) {
+            errors.add("Branch name empty or doesn't match the mask ({stage}/{branchName}). Nonsense protection.");
+        }
+        if (config.getStage().getPushCmd().trim().isEmpty()) {
+            errors.add("Push command will not be empty. Set correct value.");
+        }
+        if (config.getStage().getMergeCmd().trim().isEmpty()) {
+            errors.add("Merge command will not be empty. Set correct value.");
+        }
+        errors.forEach(e -> log.error("{}", e));
+        return errors.isEmpty();
+    }
+
+    public void mergeAndPush() {
         log.debug("Start");
         var timer = Stopwatch.createStarted();
         var issues = new ArrayList<Issue>();
@@ -60,14 +75,15 @@ public class ExecutionService {
 
         var merges = gitRepositories.stream().map(v -> v.getMerge(issues)).flatMap(Collection::stream).collect(Collectors.toList());
         mergeService.merge(merges);
-        mergeService.push(merges);
-        issues.forEach(i -> i.getPullRequests().forEach(pr -> MergeService.getBranchByPr(pr, merges).ifPresent(pr::setBranch)));
-        issues.forEach(MergeService::updateCommitters);
-        mergeService.deployInfo(merges);
-        createBuild(issues, merges);
+        if (mergeService.needUpdate(merges, issues)) {
+            mergeService.push(merges);
+            issues.forEach(i -> i.getPullRequests().forEach(pr -> MergeService.getBranchByPr(pr, merges).ifPresent(pr::setBranch)));
+            issues.forEach(MergeService::updateCommitters);
+            mergeService.deployInfo(merges);
+            createBuild(issues, merges);
+        }
         mergeService.clean();
         log.debug("Complete: {}", timer.stop());
-        return Response.builder().issues(issues).merges(merges).build();
     }
 
     public void checkJobAndUpdateIssue() {
@@ -93,11 +109,12 @@ public class ExecutionService {
     }
 
     private void createBuild(List<Issue> issues, List<Merge> merges) {
-        if (merges.stream().noneMatch(m -> m.getPush().isPushed())) {
-            log.trace("Build doesn't saved, because not pushed");
-            return;
-        }
-        var b = buildRepository.save(Build.builder().issuesJson(JsonUtil.serialize(issues)).startAt(LocalDateTime.now()).build());
+        var bItem = Build.builder()
+                .issuesJson(JsonUtil.serialize(issues))
+                .hash(mergeService.getBuildHash(merges, issues))
+                .startAt(LocalDateTime.now())
+                .build();
+        var b = buildRepository.save(bItem);
         var buildHasProjects = merges.stream().map(m -> {
             var p = projectRepository.findByName(m.getProjectName())
                     .orElse(Project.builder().name(m.getProjectName()).build());
@@ -107,10 +124,8 @@ public class ExecutionService {
                     .project(p)
                     .build(b)
                     .mergesJson(JsonUtil.serialize(m))
-                    .mergeCheckSum(m.getCheckSum())
                     .jobId(m.getPush().getDeploy().getJobId())
                     .jobStatus(m.getPush().getDeploy().getJobStatus())
-                    .lastCommitSha(m.getPush().getDeploy().getCommitSha())
                     .pushed(m.getPush().isPushed()).build();
         }).filter(Objects::nonNull).collect(Collectors.toList());
         buildHasProjectRepository.saveAll(buildHasProjects);
@@ -131,7 +146,6 @@ public class ExecutionService {
         out.append("---\t Logs").append("\n");
         for (var m : merges) {
             out.append(String.format("  -\t %s:%s", m.getProjectName(), config.getStage().getBranchName())).append("\n");
-            out.append(String.format("   \t %s", m.getLog())).append("\n");
         }
         out.append("---\t initStdOut").append("\n");
         for (var m : merges) {

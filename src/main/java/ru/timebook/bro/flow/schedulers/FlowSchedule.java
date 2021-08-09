@@ -5,6 +5,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import ru.timebook.bro.flow.exceptions.FlowRuntimeException;
 import ru.timebook.bro.flow.modules.build.ExecutionService;
 
 import java.util.concurrent.Semaphore;
@@ -26,10 +27,10 @@ public class FlowSchedule {
     @Scheduled(cron = "${bro.flow.stage.cronReceive}")
     public void refreshIssues() {
         try {
-            if (lockMerge.tryAcquire(15, TimeUnit.MINUTES)) {
+            if (executionService.validate() && lockMerge.tryAcquire(15, TimeUnit.MINUTES)) {
                 executionService.mergeAndPush();
             }
-        } catch (Exception e) {
+        } catch (FlowRuntimeException | InterruptedException e) {
             log.error("Exception: ", e);
         } finally {
             lockMerge.release();
@@ -43,7 +44,7 @@ public class FlowSchedule {
             if (lockJob.tryAcquire(15, TimeUnit.MINUTES)) {
                 executionService.checkJobAndUpdateIssue();
             }
-        } catch (Exception e) {
+        } catch (FlowRuntimeException | InterruptedException e) {
             log.error("Exception: ", e);
         } finally {
             lockJob.release();

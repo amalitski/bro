@@ -13,7 +13,7 @@ import java.util.Optional;
 public interface BuildRepository extends CrudRepository<Build, Long> {
     Optional<Build> findFirstByOrderByStartAtDesc();
 
-    @Query(value = "SELECT b FROM Build b JOIN b.buildHasProjects bp WHERE bp.pushed = true GROUP BY b")
+    @Query(value = "SELECT b FROM Build b JOIN b.buildHasProjects bp WHERE bp.pushed = true GROUP BY b, b.hash")
     List<Build> findAllPushed(Pageable pageable);
 
     @Query(value = """
@@ -24,7 +24,7 @@ public interface BuildRepository extends CrudRepository<Build, Long> {
                 bp.pushed = true AND
                 bp.jobId IS NOT NULL AND
                 (bp.jobStatus IS NULL OR bp.jobStatus NOT IN ('success', 'failed', 'canceled', 'skipped'))
-                GROUP BY b
+                GROUP BY b, b.hash
             """)
     List<Build> findFirstByProcessingJob(Pageable pageable, LocalDateTime startAt);
 }

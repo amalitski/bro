@@ -21,11 +21,10 @@ public class Merge {
     private File dirMerge;
     private File dirRepo;
     private String checkSum;
-    private String lastCommitSha;
-    private String log;
     private Push push;
     private String initStdout;
     private String initCode;
+    private boolean needForcePush;
 
     @JsonIgnore
     public boolean getInitSuccess() {

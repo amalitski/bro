@@ -53,9 +53,8 @@ bro:
         host: https://gitlab.domain.com
         token: ACCESS_TOKEN
         proxy:
-        enableRequestLogging: false
         enabled: true
-        timeout: 30000
+        timeout: 60000
 logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} %clr([%15.15t]){faint} %clr(${LOG_LEVEL_PATTERN:%5p}) %msg%n"
@@ -64,6 +63,7 @@ logging:
 spring:
   main:
     banner-mode: off
+    lazy-initialization: true
   datasource:
     url: jdbc:h2:file:./temp/database/store
     driver-class-name: org.h2.Driver
@@ -89,6 +89,9 @@ spring:
   groovy:
     template:
       check-template-location: false
+  aop:
+    auto: false
+    proxy-target-class: false
 server:
   tomcat:
     threads:

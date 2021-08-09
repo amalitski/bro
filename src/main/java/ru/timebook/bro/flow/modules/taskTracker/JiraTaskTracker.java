@@ -43,7 +43,7 @@ public class JiraTaskTracker implements TaskTracker {
         try {
             var i = client.getIssue(issue.getId()).get();
             var labels = Set.copyOf(i.getLabels()).stream()
-                    .filter(l-> l.equals(config.getIssues().getLabelDeploymentSuccessful()) || l.equals(config.getIssues().getLabelDeploymentFailed()))
+                    .filter(l -> l.equals(config.getIssues().getLabelDeploymentSuccessful()) || l.equals(config.getIssues().getLabelDeploymentFailed()))
                     .collect(Collectors.toSet());
             if (issue.isMergeLocalSuccess()) {
                 labels.add(config.getIssues().getLabelDeploymentSuccessful());
