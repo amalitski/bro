@@ -1,5 +1,6 @@
 package ru.timebook.bro.flow;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
@@ -32,6 +33,7 @@ class FlowApplicationTests {
     private Config config;
 
     @Test
+    @Disabled
     void httpsTest() {
         Client client = ClientBuilder.newClient();
         WebTarget webTarget = client.target("https://ya.ru");
