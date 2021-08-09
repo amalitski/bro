@@ -30,7 +30,11 @@ public class FlowController {
         private Mustache.Lambda hasDeployed = new Mustache.Lambda() {
             @Override
             public void execute(Template.Fragment frag, Writer out) throws IOException {
-                var c = frag.execute().equals("success") ? "badge-outline-success" : "badge-outline-warning";
+                var c = switch (frag.execute()) {
+                    case "success" -> "badge-outline-success";
+                    case "failed", "canceled", "skipped" -> "badge-outline-danger";
+                    default -> "badge-outline-warning";
+                };
                 out.write(c);
             }
         };
