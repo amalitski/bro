@@ -21,7 +21,6 @@ import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -52,7 +51,13 @@ public class MergeService {
 
     public boolean needUpdate(List<Merge> merges, List<Issue> issues) {
         return merges.parallelStream().anyMatch(m -> {
-            var build = getLastBuild(DateTimeUtil.duration("P-1D"));
+            var page = PageRequest.of(0, 1, Sort.by("startAt").descending());
+            var build = buildRepository.findFirstByPushed(page, DateTimeUtil.duration("P-1D")).stream().findFirst();
+            if (build.isEmpty()) {
+                log.warn("Build empty, force update: {}", m.getProjectName());
+            } else if (!build.get().getHash().equals(getBuildHash(merges, issues))) {
+                log.warn("Build hash not equal, force update: {}", m.getProjectName());
+            }
             return build.isEmpty() || !build.get().getHash().equals(getBuildHash(merges, issues));
         });
     }
@@ -70,16 +75,9 @@ public class MergeService {
         return DigestUtils.md5DigestAsHex(source.getBytes());
     }
 
-    private Optional<Build> getLastBuild(LocalDateTime date) {
-        var builds = buildRepository.findFirstByProcessingJob(PageRequest.of(0, 1, Sort.by("startAt").descending()), date);
-        if (builds.isEmpty()) {
-            return Optional.empty();
-        }
-        return Optional.of(builds.get(0));
-    }
-
     public Optional<Build> checkJob() {
-        var build = getLastBuild(DateTimeUtil.duration("PT-1H30M"));
+        var page = PageRequest.of(0, 1, Sort.by("startAt").descending());
+        var build = buildRepository.findFirstByProcessingJob(page, DateTimeUtil.duration("PT-1H30M")).stream().findFirst();
         if (build.isEmpty()) {
             return Optional.empty();
         }
