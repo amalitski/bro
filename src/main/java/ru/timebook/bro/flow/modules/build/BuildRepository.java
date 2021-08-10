@@ -27,4 +27,13 @@ public interface BuildRepository extends CrudRepository<Build, Long> {
                 GROUP BY b, b.hash
             """)
     List<Build> findFirstByProcessingJob(Pageable pageable, LocalDateTime startAt);
+
+    @Query(value = """
+            SELECT b FROM Build b JOIN b.buildHasProjects bp
+            JOIN bp.project p
+            WHERE b.startAt >= :startAt AND
+                bp.pushed = true
+                GROUP BY b, b.hash
+            """)
+    List<Build> findFirstByPushed(Pageable pageable, LocalDateTime startAt);
 }
