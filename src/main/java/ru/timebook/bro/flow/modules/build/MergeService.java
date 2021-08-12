@@ -178,7 +178,7 @@ public class MergeService {
                             } catch (InterruptedException e) {
                                 log.error("Catch exception", e);
                             }
-                            return m.getPush().setDeploy(gitlabGitRepository.getDeploy(m.getProjectName(), config.getStage().getBranchName()));
+                            m.getPush().setDeploy(gitlabGitRepository.getDeploy(m.getProjectName(), config.getStage().getBranchName()));
                         }
                 );
     }
