@@ -172,7 +172,15 @@ public class MergeService {
         }
         merges.stream()
                 .filter(m -> m.getPush().isPushed())
-                .forEach(m -> m.getPush().setDeploy(gitlabGitRepository.getDeploy(m.getProjectName(), config.getStage().getBranchName())));
+                .forEach(m -> {
+                            try {
+                                Thread.sleep(1000);
+                            } catch (InterruptedException e) {
+                                log.error("Catch exception", e);
+                            }
+                            return m.getPush().setDeploy(gitlabGitRepository.getDeploy(m.getProjectName(), config.getStage().getBranchName()));
+                        }
+                );
     }
 
     private void pushExec(Merge merge) {
