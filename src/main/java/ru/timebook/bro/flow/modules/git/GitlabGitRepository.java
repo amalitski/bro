@@ -221,6 +221,17 @@ public class GitlabGitRepository implements GitRepository {
         try {
             return api.getPipelineApi().getPipelines(projectName, p).stream().map(pp -> {
                 var job = getDeployJobByPipeline(projectName, pp.getId());
+                if (job.isPresent()) {
+                    var j =job.get();
+                    log.trace("Job: {} / {} / {} / jobId: {}",
+                            projectName,
+                            j.getCommit().getCommitterName(),
+                            j.getCommit().getCreatedAt(),
+                            j.getId()
+                    );
+                } else {
+                    log.trace("Job: {} - not found", projectName);
+                }
                 return job.map(value -> Merge.Push.Deploy.builder()
                         .commitSha(value.getCommit().getId())
                         .jobId(value.getId())
