@@ -27,6 +27,7 @@ public class ExecutionService {
     private final BuildRepository buildRepository;
     private final ProjectRepository projectRepository;
     private final BuildHasProjectRepository buildHasProjectRepository;
+    private final JsonUtil jsonUtil;
 
     @Data
     @Builder
@@ -41,7 +42,9 @@ public class ExecutionService {
                             ProjectRepository projectRepository,
                             BuildHasProjectRepository buildHasProjectRepository,
                             Map<String, TaskTracker> taskTrackers,
-                            Map<String, GitRepository> gitRepositories) {
+                            Map<String, GitRepository> gitRepositories,
+                            JsonUtil jsonUtil
+    ) {
         this.mergeService = mergeService;
         this.config = config;
         this.buildRepository = buildRepository;
@@ -49,6 +52,7 @@ public class ExecutionService {
         this.buildHasProjectRepository = buildHasProjectRepository;
         this.taskTrackers = taskTrackers.values().stream().filter(TaskTracker::isEnabled).collect(Collectors.toList());
         this.gitRepositories = gitRepositories.values().stream().filter(GitRepository::isEnabled).collect(Collectors.toList());
+        this.jsonUtil = jsonUtil;
     }
 
     public boolean validate(){
@@ -77,8 +81,8 @@ public class ExecutionService {
         mergeService.merge(merges);
         if (mergeService.needUpdate(merges, issues)) {
             mergeService.push(merges);
-            issues.forEach(i -> i.getPullRequests().forEach(pr -> MergeService.getBranchByPr(pr, merges).ifPresent(pr::setBranch)));
-            issues.forEach(MergeService::updateCommitters);
+            issues.forEach(i -> i.getPullRequests().forEach(pr -> mergeService.getBranchByPr(pr, merges).ifPresent(pr::setBranch)));
+            issues.forEach(mergeService::updateCommitters);
             mergeService.deployInfo(merges);
             createBuild(issues, merges);
         }
@@ -93,7 +97,7 @@ public class ExecutionService {
         }
         var b = build.get();
         try {
-            var issues = List.of(JsonUtil.deserialize(b.getIssuesJson(), Issue[].class));
+            var issues = List.of(jsonUtil.deserialize(b.getIssuesJson(), Issue[].class));
             issues.stream().filter(i -> i.isDeployedSuccessful() && !i.isIssueUpdated()).forEach(i -> {
                 taskTrackers.forEach(t -> {
                     if (i.getTaskTrackerClassName().equals(t.getClass().getName())) {
@@ -101,7 +105,7 @@ public class ExecutionService {
                     }
                 });
             });
-            b.setIssuesJson(JsonUtil.serialize(issues));
+            b.setIssuesJson(jsonUtil.serialize(issues));
             buildRepository.save(b);
         } catch (IOException e) {
             log.error("Deserialize issues catch exception", e);
@@ -110,7 +114,7 @@ public class ExecutionService {
 
     private void createBuild(List<Issue> issues, List<Merge> merges) {
         var bItem = Build.builder()
-                .issuesJson(JsonUtil.serialize(issues))
+                .issuesJson(jsonUtil.serialize(issues))
                 .hash(mergeService.getBuildHash(merges, issues))
                 .startAt(LocalDateTime.now())
                 .build();
@@ -123,7 +127,7 @@ public class ExecutionService {
             return BuildHasProject.builder()
                     .project(p)
                     .build(b)
-                    .mergesJson(JsonUtil.serialize(m))
+                    .mergesJson(jsonUtil.serialize(m))
                     .jobId(m.getPush().getDeploy().getJobId())
                     .jobStatus(m.getPush().getDeploy().getJobStatus())
                     .pushed(m.getPush().isPushed()).build();

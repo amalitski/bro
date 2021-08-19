@@ -13,6 +13,7 @@ import ru.timebook.bro.flow.utils.JsonUtil;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -20,6 +21,8 @@ import java.util.stream.Collectors;
 @Service
 public class FlowService {
     private final BuildRepository buildRepository;
+    private final DateTimeUtil dateTimeUtil;
+    private final JsonUtil jsonUtil;
 
     @Data
     @EqualsAndHashCode(callSuper = true)
@@ -58,19 +61,21 @@ public class FlowService {
         private final Build lastBuild;
     }
 
-    public FlowService(BuildRepository buildRepository) {
+    public FlowService(BuildRepository buildRepository, DateTimeUtil dateTimeUtil, JsonUtil jsonUtil) {
         this.buildRepository = buildRepository;
+        this.dateTimeUtil = dateTimeUtil;
+        this.jsonUtil = jsonUtil;
     }
 
     private Build getBuild(ru.timebook.bro.flow.modules.build.Build b) {
         try {
-            var i = JsonUtil.deserialize(b.getIssuesJson(), Issue[].class);
+            var i = jsonUtil.deserialize(b.getIssuesJson(), Issue[].class);
             var iSuccess = Arrays.stream(i).filter(ru.timebook.bro.flow.modules.taskTracker.Issue::isMergeLocalSuccess).count();
             var iFails = i.length - iSuccess;
             return Build.builder().id(b.getId())
                     .issuesSuccess(Math.toIntExact(iSuccess))
                     .issuesFails(Math.toIntExact(iFails))
-                    .buildStartAt(DateTimeUtil.formatFull(b.getStartAt()))
+                    .buildStartAt(dateTimeUtil.formatFull(b.getStartAt()))
                     .build();
         } catch (IOException e) {
             log.error("Catch Exception", e);
@@ -87,7 +92,7 @@ public class FlowService {
         }
         var merges = b.get().getBuildHasProjects().stream().map(buildHasProject -> {
             try {
-                return JsonUtil.deserialize(buildHasProject.getMergesJson(), Merge.class);
+                return jsonUtil.deserialize(buildHasProject.getMergesJson(), Merge.class);
             } catch (IOException e) {
                 log.error("Deserialize with exception", e);
             }
@@ -96,7 +101,7 @@ public class FlowService {
         var lastBuild = getBuild(b.get());
         var builds = buildRepository.findAllPushed(PageRequest.of(0, 5, Sort.by("startAt").descending())).stream()
                 .map(this::getBuild).collect(Collectors.toList());
-        var i = JsonUtil.deserialize(b.get().getIssuesJson(), Issue[].class);
+        var i = jsonUtil.deserialize(b.get().getIssuesJson(), Issue[].class);
         return Response.builder()
                 .issues(Arrays.stream(i).toList())
                 .merges(merges)

@@ -21,10 +21,14 @@ import java.util.stream.Collectors;
 @Service
 public class RedmineTaskTracker implements TaskTracker {
     private final Config.TaskTrackers.Redmine config;
+    private final DateTimeUtil dateTimeUtil;
+    private final GravatarUtil gravatarUtil;
     private RedmineManager api;
 
-    public RedmineTaskTracker(Config config) {
+    public RedmineTaskTracker(Config config, DateTimeUtil dateTimeUtil, GravatarUtil gravatarUtil) {
         this.config = config.getTaskTrackers().getRedmine();
+        this.dateTimeUtil = dateTimeUtil;
+        this.gravatarUtil = gravatarUtil;
     }
 
     public RedmineManager getApi() {
@@ -86,12 +90,12 @@ public class RedmineTaskTracker implements TaskTracker {
         var issues = getApi().getIssueManager().getIssues(params);
 
         issues.parallelStream().forEach(i -> {
-            if (DateTimeUtil.toLocalDate(i.getUpdatedOn()).isBefore(afterDate)) {
+            if (dateTimeUtil.toLocalDate(i.getUpdatedOn()).isBefore(afterDate)) {
                 return;
             }
             try {
                 var aFull = getApi().getUserManager().getUserById(i.getAuthor().getId());
-                var avatar = (aFull.getMail() != null) ? GravatarUtil.getUri(aFull.getMail(), 50) : null;
+                var avatar = (aFull.getMail() != null) ? gravatarUtil.getUri(aFull.getMail(), 50) : null;
                 var a = Issue.Author.builder()
                         .id(String.valueOf(i.getAuthor().getId()))
                         .avatarUri(avatar)

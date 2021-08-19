@@ -12,10 +12,12 @@ import ru.timebook.bro.flow.utils.InfoUtil;
 public class InfoEventListener {
     @Autowired
     private Config config;
+    @Autowired
+    private InfoUtil infoUtil;
 
     @EventListener
     public void onApplicationEvent(ContextRefreshedEvent event) {
-        InfoUtil.showUsage();
-        InfoUtil.showConfig(config);
+        infoUtil.showUsage();
+//        infoUtil.showConfig(config);
     }
 }
