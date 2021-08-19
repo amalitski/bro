@@ -3,6 +3,7 @@ package ru.timebook.bro.flow.modules.build;
 import com.google.common.base.Stopwatch;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -140,7 +141,7 @@ public class MergeService {
     }
 
     private void cleanDatabase() {
-        var items = buildRepository.findAllPushed(PageRequest.of(1, 100, Sort.by("startAt").descending()));
+        List<Build> items = buildRepository.findAll(PageRequest.of(1, 5, Sort.by("startAt").descending()));
         if (!items.isEmpty()) {
             buildRepository.deleteAll(items);
         }
