@@ -86,7 +86,7 @@ public class MergeService {
                 .sorted(Comparator.comparing(String::toString))
                 .collect(Collectors.joining(","));
         String source = g + i;
-        return DigestUtils.md5DigestAsHex(source.getBytes());
+        return DigestUtils.md5DigestAsHex(source.getBytes(StandardCharsets.UTF_8));
     }
 
     public Optional<Build> checkJob() {
