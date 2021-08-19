@@ -11,13 +11,15 @@ app:
         production: 50m
       memory:
         _default: 1024Mi
+        test: 512Mi
         rc: 1024Mi
         production: 1024Mi
       storage:
         _default: 2G
     limits:
       memory:
-        _default: 512Mi
+        _default: 1024Mi
+        test: 512Mi
         rc: 1024Mi
         production: 1024Mi
 
