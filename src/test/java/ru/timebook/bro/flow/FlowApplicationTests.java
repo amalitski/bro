@@ -28,9 +28,13 @@ import java.time.format.DateTimeFormatter;
 @Import({Config.class})
 @SpringBootTest
 class FlowApplicationTests {
-    private final static Logger logger = LoggerFactory.getLogger(FlowApplicationTests.class);
+    private final Logger logger = LoggerFactory.getLogger(FlowApplicationTests.class);
     @Autowired
     private Config config;
+    @Autowired
+    private DateTimeUtil dateTimeUtil;
+    @Autowired
+    private GravatarUtil gravatarUtil;
 
     @Test
     @Disabled
@@ -54,7 +58,7 @@ class FlowApplicationTests {
 
     @Test
     void durationDayTimeTest() {
-        var localDate = DateTimeUtil.duration("PT-1H");
+        var localDate = dateTimeUtil.duration("PT-1H");
         var date = localDate.format(DateTimeFormatter.ofPattern("yyyyMMdd HH:mm"));
         logger.info("result PT-1H: {}", date);
         Assert.isTrue(date.length() == 14, "Length equal format");
@@ -63,7 +67,7 @@ class FlowApplicationTests {
     @Test
     void gravatarHashTest() {
         var email = "bender.rodriguesz@mail.zone";
-        var uri = GravatarUtil.getUri(email, 50);
+        var uri = gravatarUtil.getUri(email, 50);
         Assert.isTrue(uri.contains("ed1c4c31a6bd71ea498394438d37f444"), "Hash part success calculates");
         Assert.isTrue(uri.contains("size=50"), "Size exists");
     }

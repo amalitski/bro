@@ -33,13 +33,27 @@ public class MergeService {
     private final BuildHasProjectRepository buildHasProjectRepository;
     private final ProjectRepository projectRepository;
     private final GitlabGitRepository gitlabGitRepository;
+    private final DateTimeUtil dateTimeUtil;
+    private final JsonUtil jsonUtil;
+    private final StringUtil stringUtil;
 
-    public MergeService(Config config, BuildRepository buildRepository, BuildHasProjectRepository buildHasProjectRepository, ProjectRepository projectRepository, GitlabGitRepository gitlabGitRepository) {
+    public MergeService(Config config,
+                        BuildRepository buildRepository,
+                        BuildHasProjectRepository buildHasProjectRepository,
+                        ProjectRepository projectRepository,
+                        GitlabGitRepository gitlabGitRepository,
+                        DateTimeUtil dateTimeUtil,
+                        JsonUtil jsonUtil,
+                        StringUtil stringUtil
+    ) {
         this.config = config;
         this.buildRepository = buildRepository;
         this.buildHasProjectRepository = buildHasProjectRepository;
         this.projectRepository = projectRepository;
         this.gitlabGitRepository = gitlabGitRepository;
+        this.dateTimeUtil = dateTimeUtil;
+        this.jsonUtil = jsonUtil;
+        this.stringUtil = stringUtil;
     }
 
     public void merge(List<Merge> merges) {
@@ -52,7 +66,7 @@ public class MergeService {
     public boolean needUpdate(List<Merge> merges, List<Issue> issues) {
         return merges.parallelStream().anyMatch(m -> {
             var page = PageRequest.of(0, 1, Sort.by("startAt").descending());
-            var build = buildRepository.findFirstByPushed(page, DateTimeUtil.duration("P-1D")).stream().findFirst();
+            var build = buildRepository.findFirstByPushed(page, dateTimeUtil.duration("P-1D")).stream().findFirst();
             if (build.isEmpty()) {
                 log.warn("Build empty, force update: {}", m.getProjectName());
             } else if (!build.get().getHash().equals(getBuildHash(merges, issues))) {
@@ -77,7 +91,7 @@ public class MergeService {
 
     public Optional<Build> checkJob() {
         var page = PageRequest.of(0, 1, Sort.by("startAt").descending());
-        var build = buildRepository.findFirstByProcessingJob(page, DateTimeUtil.duration("PT-1H30M")).stream().findFirst();
+        var build = buildRepository.findFirstByProcessingJob(page, dateTimeUtil.duration("PT-1H30M")).stream().findFirst();
         if (build.isEmpty()) {
             return Optional.empty();
         }
@@ -91,9 +105,9 @@ public class MergeService {
             var s = status.get();
             var hasSuccess = s.equals("success");
             try {
-                var m = JsonUtil.deserialize(bp.getMergesJson(), Merge.class);
+                var m = jsonUtil.deserialize(bp.getMergesJson(), Merge.class);
                 m.getPush().getDeploy().setJobStatus(s);
-                bp.setMergesJson(JsonUtil.serialize(m));
+                bp.setMergesJson(jsonUtil.serialize(m));
 
             } catch (IOException e) {
                 log.error("Catch exception", e);
@@ -102,7 +116,7 @@ public class MergeService {
             buildHasProjectRepository.save(bp);
 
             try {
-                var issues = List.of(JsonUtil.deserialize(b.getIssuesJson(), Issue[].class));
+                var issues = List.of(jsonUtil.deserialize(b.getIssuesJson(), Issue[].class));
                 issues.forEach(i -> {
                     i.getPullRequests().stream().filter(pr -> pr.getProjectName() != null).forEach(pr -> {
                         if (pr.getProjectName().equals(p.getName())) {
@@ -110,7 +124,7 @@ public class MergeService {
                         }
                     });
                 });
-                b.setIssuesJson(JsonUtil.serialize(issues));
+                b.setIssuesJson(jsonUtil.serialize(issues));
                 buildRepository.save(b);
             } catch (IOException e) {
                 log.error("Catch exception", e);
@@ -202,7 +216,7 @@ public class MergeService {
         }
     }
 
-    public static Optional<Merge.Branch> getBranchByPr(Issue.PullRequest pr, List<Merge> merges) {
+    public Optional<Merge.Branch> getBranchByPr(Issue.PullRequest pr, List<Merge> merges) {
         if (pr.getSourceBranchName() == null) {
             return Optional.empty();
         }
@@ -213,7 +227,7 @@ public class MergeService {
         return mr.get().getBranches().stream().filter(b -> b.getBranchName().equals(pr.getSourceBranchName())).findFirst();
     }
 
-    public static void updateCommitters(Issue issue) {
+    public void updateCommitters(Issue issue) {
         var committers = new HashSet<Issue.Committer>();
         issue.getPullRequests().forEach(pr -> {
             if (pr.getBranch() != null && pr.getBranch().getCommits() != null) {
@@ -431,7 +445,7 @@ public class MergeService {
 
     private String getMergeDirPath(Merge merge) {
         return getProjectDirPath(merge) + File.separator +
-                DateTimeUtil.getDate("yyyy.MM.dd_HH:mm.ss") + "R" + Integer.toHexString(Integer.parseInt(StringUtil.random(1000, 9999)));
+                dateTimeUtil.getDate("yyyy.MM.dd_HH:mm.ss") + "R" + Integer.toHexString(Integer.parseInt(stringUtil.random(1000, 9999)));
     }
 
     private List<File> getDirectories(String path) {

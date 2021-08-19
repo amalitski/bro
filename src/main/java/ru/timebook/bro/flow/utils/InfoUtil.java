@@ -1,15 +1,17 @@
 package ru.timebook.bro.flow.utils;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 import java.text.NumberFormat;
 
 @Slf4j
+@Component
 public class InfoUtil {
     private InfoUtil() {
     }
 
-    public static void showUsage() {
+    public void showUsage() {
         Runtime runtime = Runtime.getRuntime();
         final NumberFormat format = NumberFormat.getInstance();
         final long maxMemory = runtime.maxMemory();
@@ -37,10 +39,10 @@ public class InfoUtil {
     }
 
 
-    public static void showConfig(Object config) {
-        var conf = JsonUtil.serialize(config);
-        log.info("========================== Configuration ==========================");
-        log.info("Configuration: {} ", conf);
-        log.info("=================================================================");
-    }
+//    public void showConfig(Object config) {
+//        var conf = JsonUtil.serialize(config);
+//        log.info("========================== Configuration ==========================");
+//        log.info("Configuration: {} ", conf);
+//        log.info("=================================================================");
+//    }
 }
