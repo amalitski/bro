@@ -36,4 +36,6 @@ public interface BuildRepository extends CrudRepository<Build, Long> {
                 GROUP BY b, b.hash
             """)
     List<Build> findFirstByPushed(Pageable pageable, LocalDateTime startAt);
+
+    List<Build> findAll(Pageable pageable);
 }

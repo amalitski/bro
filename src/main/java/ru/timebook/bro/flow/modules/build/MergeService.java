@@ -3,6 +3,7 @@ package ru.timebook.bro.flow.modules.build;
 import com.google.common.base.Stopwatch;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -86,7 +87,7 @@ public class MergeService {
                 .sorted(Comparator.comparing(String::toString))
                 .collect(Collectors.joining(","));
         String source = g + i;
-        return DigestUtils.md5DigestAsHex(source.getBytes());
+        return DigestUtils.md5DigestAsHex(source.getBytes(StandardCharsets.UTF_8));
     }
 
     public Optional<Build> checkJob() {
@@ -140,7 +141,7 @@ public class MergeService {
     }
 
     private void cleanDatabase() {
-        var items = buildRepository.findAllPushed(PageRequest.of(1, 100, Sort.by("startAt").descending()));
+        List<Build> items = buildRepository.findAll(PageRequest.of(1, 5, Sort.by("startAt").descending()));
         if (!items.isEmpty()) {
             buildRepository.deleteAll(items);
         }
