@@ -221,7 +221,7 @@ public class GitlabGitRepository implements GitRepository {
             return api.getPipelineApi().getPipelines(projectName, p).stream().map(pp -> {
                 var job = getDeployJobByPipeline(projectName, pp.getId());
                 if (job.isPresent()) {
-                    var j =job.get();
+                    var j = job.get();
                     log.trace("Job: {} / {} / {} / jobId: {}",
                             projectName,
                             j.getCommit().getCommitterName(),
