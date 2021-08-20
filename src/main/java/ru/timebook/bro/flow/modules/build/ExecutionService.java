@@ -55,7 +55,7 @@ public class ExecutionService {
         this.jsonUtil = jsonUtil;
     }
 
-    public boolean validate(){
+    public boolean validate() {
         var errors = new ArrayList<String>();
         if (config.getStage().getBranchName().isEmpty() || !config.getStage().getBranchName().matches("[^/]+/.+")) {
             errors.add("Branch name empty or doesn't match the mask ({stage}/{branchName}). Nonsense protection.");
