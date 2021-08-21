@@ -44,7 +44,7 @@ public class FlowSchedule {
             if (lockJob.tryAcquire(15, TimeUnit.MINUTES)) {
                 executionService.checkJobAndUpdateIssue();
             }
-        } catch (FlowRuntimeException | InterruptedException e) {
+        } catch (InterruptedException e) {
             log.error("Exception: ", e);
         } finally {
             lockJob.release();
