@@ -12,7 +12,7 @@ bro:
       deploy:
         jobName: Deploy to Stage (example)
       git:
-        cronReceive: "0 */1 * * * ?"
+        cronReceive: "0 */5 * * * ?"
         userName: Bender Rodriguez
         userEmail: bender@company.com
       temp:
