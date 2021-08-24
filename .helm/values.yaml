@@ -24,7 +24,7 @@ app:
         production: 1024Mi
 
 java_opts:
-  _default: "-server -Dhttps.protocols=TLSv1.2 -Xss256k -Xms128m -Xmx256m -XX:+OptimizeFill -XX:MaxJavaStackTraceDepth=5"
+  _default: "-server -XX:+AlwaysActAsServerClassMachine -XX:+UseContainerSupport -Dhttps.protocols=TLSv1.2 -Xss256k -Xms256m -Xmx256m -XX:MaxRAM=512m -XX:+OptimizeFill -XX:MaxJavaStackTraceDepth=5"
 
 git_ssh_command:
   _default: "ssh -i /app/git_key.private -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
