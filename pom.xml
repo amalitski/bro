@@ -6,7 +6,7 @@
     <groupId>ru.timebook</groupId>
     <artifactId>bro</artifactId>
     <name>Project Bro</name>
-    <version>0.2.2</version>
+    <version>0.2.3</version>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
