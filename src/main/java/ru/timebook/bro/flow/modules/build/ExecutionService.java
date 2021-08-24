@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.timebook.bro.flow.configs.Config;
+import ru.timebook.bro.flow.exceptions.FlowRuntimeException;
 import ru.timebook.bro.flow.modules.git.GitRepository;
 import ru.timebook.bro.flow.modules.taskTracker.Issue;
 import ru.timebook.bro.flow.modules.taskTracker.TaskTracker;
@@ -74,19 +75,23 @@ public class ExecutionService {
         log.debug("Start");
         var timer = Stopwatch.createStarted();
         var issues = new ArrayList<Issue>();
-        taskTrackers.forEach((v) -> issues.addAll(v.getForMerge()));
-        gitRepositories.forEach((v) -> v.getInfo(issues));
-
-        var merges = gitRepositories.stream().map(v -> v.getMerge(issues)).flatMap(Collection::stream).collect(Collectors.toList());
-        mergeService.merge(merges);
-        if (mergeService.needUpdate(merges, issues)) {
-            mergeService.push(merges);
-            issues.forEach(i -> i.getPullRequests().forEach(pr -> mergeService.getBranchByPr(pr, merges).ifPresent(pr::setBranch)));
-            issues.forEach(mergeService::updateCommitters);
-            mergeService.deployInfo(merges);
-            createBuild(issues, merges);
+        try {
+            taskTrackers.forEach((v) -> issues.addAll(v.getForMerge()));
+            gitRepositories.forEach((v) -> v.getInfo(issues));
+            var merges = gitRepositories.stream().map(v -> v.getMerge(issues)).flatMap(Collection::stream).collect(Collectors.toList());
+            mergeService.merge(merges);
+            if (mergeService.needUpdate(merges, issues)) {
+                mergeService.push(merges);
+                issues.forEach(i -> i.getPullRequests().forEach(pr -> mergeService.getBranchByPr(pr, merges).ifPresent(pr::setBranch)));
+                issues.forEach(mergeService::updateCommitters);
+                mergeService.deployInfo(merges);
+                createBuild(issues, merges);
+            }
+        } catch (FlowRuntimeException e) {
+            log.error("Catch exception", e);
+        } finally {
+            mergeService.clean();
         }
-        mergeService.clean();
         log.debug("Complete: {}", timer.stop());
     }
 
