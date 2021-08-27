@@ -92,7 +92,7 @@ public class MergeService {
 
     public Optional<Build> checkJob() {
         var page = PageRequest.of(0, 1, Sort.by("startAt").descending());
-        var build = buildRepository.findFirstByProcessingJob(page, dateTimeUtil.duration("PT-1H30M")).stream().findFirst();
+        var build = buildRepository.findFirstByProcessingJob(page, dateTimeUtil.duration("PT-4H")).stream().findFirst();
         if (build.isEmpty()) {
             return Optional.empty();
         }
