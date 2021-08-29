@@ -125,16 +125,10 @@ public class ExecutionService {
                 log.warn("Load new state. Checksum from branches doesn't equal.");
                 return m;
             }
-            var nCommit = m.getPush().getDeploy().getCommitSha();
-            var lCommit = lMerge.get().getPush().getDeploy().getCommitSha();
-            if (Objects.nonNull(nCommit) && Objects.nonNull(lCommit) && nCommit.equals(lCommit)) {
-                var lM = lMerge.get();
-                lM.getPush().setPushed(false);
-                lM.setReused(true);
-                return lM;
-            }
-            log.warn("Load new state. Remote commit from targetBranch doesn't equal.");
-            return m;
+            var lM = lMerge.get();
+            lM.getPush().setPushed(false);
+            lM.setReused(true);
+            return lM;
         }).collect(Collectors.toList());
     }
 
