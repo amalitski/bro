@@ -14,7 +14,7 @@ data:
           deploy:
             jobName: {{ pluck .Values.werf.env .Values.bro.flow.stage.deploy.jobName | first | default .Values.bro.flow.stage.deploy.jobName._default }}
           git:
-            cronReceive: "0 */1 * * * ?"
+            cronReceive: "*/30 * * * * ?"
             userEmail: {{ pluck .Values.werf.env .Values.bro.flow.stage.git.userEmail | first | default .Values.bro.flow.stage.git.userEmail._default }}
         task-trackers:
           redmine:
