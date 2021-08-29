@@ -95,8 +95,7 @@ public class MergeService {
         return true;
     }
 
-    private void updateBuildIssue(BuildHasProject bp) {
-        var b = bp.getBuild();
+    private void updateBuildIssue(Build b, BuildHasProject bp) {
         var p = bp.getProject();
         var s = bp.getJobStatus();
         try {
@@ -134,7 +133,7 @@ public class MergeService {
                 .filter(bp -> Objects.nonNull(bp.getJobId()))
                 .forEach(bp -> {
                     if (updateJobStatus(bp)) {
-                        updateBuildIssue(bp);
+                        updateBuildIssue(b, bp);
                     }
                 });
 
