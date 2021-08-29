@@ -48,16 +48,6 @@ data:
                 preMerge: master
               - path: timebook/timebook.web-client
                 preMerge: master
-              - path: IT/DEV/shift-sender
-                preMerge: master
-              - path: IT/DEV/Node-MS/auchan-ms
-                preMerge: master
-              - path: IT/DEV/Node-MS/lenta-ms
-                preMerge: master
-              - path: IT/DEV/Node-MS/document-ms
-                preMerge: master
-              - path: IT/DEV/web-sockets
-                preMerge: master
               - path: IT/DEV/recognition/surf
                 preMerge: master
 
