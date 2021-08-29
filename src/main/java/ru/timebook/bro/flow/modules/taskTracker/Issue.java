@@ -28,7 +28,8 @@ public class Issue {
 
     @JsonIgnore
     public boolean isDeployedSuccessful() {
-        return this.pullRequests.stream().filter(p -> p.getUri() != null).allMatch(p -> p.getDeployedStatus() != null && p.getDeployedStatus().equals("success"));
+        return this.pullRequests.stream().filter(p -> p.getUri() != null)
+                .allMatch(p -> p.getDeployedStatus() != null && p.getDeployedStatus().equals("success"));
     }
 
     @Singular
