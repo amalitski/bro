@@ -329,6 +329,9 @@ public class MergeService {
                 throw new FlowRuntimeException(msg);
             }
             var checkSum = DigestUtils.md5DigestAsHex(restCheckSum.get("stdout").getBytes(StandardCharsets.UTF_8));
+            if (checkSum == null || checkSum.isEmpty()) {
+                log.error("Checksum empty: {} / {}", checkSum, restCheckSum.size());
+            }
             merge.setCheckSum(checkSum);
         } catch (IOException e) {
             throw new FlowRuntimeException(e);
