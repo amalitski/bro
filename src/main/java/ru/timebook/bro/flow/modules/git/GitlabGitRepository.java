@@ -29,7 +29,7 @@ public class GitlabGitRepository implements GitRepository {
     private final Config.Repositories.Gitlab config;
     private final Config.Stage configStage;
     private GitLabApi gitLabApi;
-    private CacheService cacheService;
+    private final CacheService cacheService;
 
     public GitlabGitRepository(Config config, CacheService cacheService) {
         this.config = config.getRepositories().getGitlab();
@@ -153,6 +153,13 @@ public class GitlabGitRepository implements GitRepository {
                 maps.add(getMergeByRepo(r));
             }
         });
+        maps.forEach(m -> {
+            m.setRemoteBranchName(configStage.getBranchName());
+            var push = Merge.Push.builder()
+                    .deploy(getDeploy(m.getProjectName(), m.getRemoteBranchName()))
+                    .build();
+            m.setPush(push);
+        });
         log.debug("Merge count: {}", maps.size());
         return maps;
     }
@@ -174,7 +181,6 @@ public class GitlabGitRepository implements GitRepository {
                 .httpUrlRepo(pr.getHttpUrlRepo())
                 .sshUrlRepo(pr.getSshUrlRepo())
                 .push(Merge.Push.builder().deploy(Merge.Push.Deploy.builder().build()).build())
-                .needForcePush(true)
                 .build();
     }
 
@@ -230,6 +236,7 @@ public class GitlabGitRepository implements GitRepository {
                     );
                 } else {
                     log.trace("Job: {} - not found", projectName);
+                    return null;
                 }
                 return job.map(value -> Merge.Push.Deploy.builder()
                         .commitSha(value.getCommit().getId())
