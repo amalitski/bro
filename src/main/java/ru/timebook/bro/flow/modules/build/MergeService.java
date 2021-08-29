@@ -57,7 +57,8 @@ public class MergeService {
     }
 
     public void merge(List<Merge> merges) {
-        merges.parallelStream().filter(m -> !Objects.nonNull(m.getCheckSum()) || m.getCheckSum().isEmpty()).forEach(merge -> {
+        merges.parallelStream().filter(m -> Objects.isNull(m.getCheckSum()) || m.getCheckSum().isEmpty()).forEach(merge -> {
+            log.warn("Checksum: {}", merge.getCheckSum());
             initRepo(merge);
             mergeRepo(merge);
         });
