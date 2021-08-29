@@ -112,7 +112,7 @@ public class ExecutionService {
             m.setReused(false);
             var lMerge = lastMerges.stream().filter(lm -> lm.getProjectName().equals(m.getProjectName())).findFirst();
             if (lMerge.isEmpty()) {
-                log.warn("Load new state. Previous merge empty.");
+                log.warn("Load new state for {}. Previous merge empty.", m.getProjectName());
                 return m;
             }
             var bNewList = m.getBranches().stream().map(Merge.Branch::getCheckSum)
@@ -122,7 +122,7 @@ public class ExecutionService {
                     .sorted(Comparator.comparing(String::toString))
                     .collect(Collectors.joining(","));
             if (!bNewList.equals(bLastList)) {
-                log.warn("Load new state. Checksum from branches doesn't equal.");
+                log.warn("Load new state {}. Checksum from branches doesn't equal.", m.getProjectName());
                 return m;
             }
             var lM = lMerge.get();
