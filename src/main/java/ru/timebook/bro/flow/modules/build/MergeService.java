@@ -95,8 +95,7 @@ public class MergeService {
         return true;
     }
 
-    private void updateBuildIssue(BuildHasProject bp) {
-        var b = bp.getBuild();
+    private void updateBuildIssue(Build b, BuildHasProject bp) {
         var p = bp.getProject();
         var s = bp.getJobStatus();
         try {
@@ -129,23 +128,16 @@ public class MergeService {
         if (build.isEmpty()) {
             return Optional.empty();
         }
-        var jobStatus = Arrays.asList("success", "failed", "canceled", "skipped");
-        var allMatch = build.get().getBuildHasProjects().stream()
+        var b = build.get();
+        b.getBuildHasProjects().stream()
                 .filter(bp -> Objects.nonNull(bp.getJobId()))
-                .allMatch(bp -> jobStatus.contains(bp.getJobStatus()));
-        if (allMatch) {
-            return Optional.empty();
-        }
-        build.get().getBuildHasProjects().stream()
-                .filter(bp -> Objects.nonNull(bp.getJobId()))
-                .filter(bp -> !jobStatus.contains(bp.getJobStatus()))
                 .forEach(bp -> {
                     if (updateJobStatus(bp)) {
-                        updateBuildIssue(bp);
+                        updateBuildIssue(b, bp);
                     }
                 });
 
-        return Optional.empty();
+        return Optional.of(b);
     }
 
     public void clean() {
