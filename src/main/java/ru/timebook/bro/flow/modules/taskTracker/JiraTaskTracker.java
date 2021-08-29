@@ -33,7 +33,7 @@ public class JiraTaskTracker implements TaskTracker {
         } catch (ExecutionException | InterruptedException e) {
             log.error("Exception ", e);
         }
-        log.debug("Issues for merge: {}", listIssues.size());
+        log.debug("Jira issues: {}", listIssues.size());
         return listIssues;
     }
 

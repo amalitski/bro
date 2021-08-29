@@ -2,11 +2,13 @@ package ru.timebook.bro.flow;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.gitlab4j.api.GitLabApiException;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.util.Assert;
+import org.springframework.util.DigestUtils;
 import ru.timebook.bro.flow.configs.Config;
 import ru.timebook.bro.flow.modules.build.BuildHasProjectRepository;
 import ru.timebook.bro.flow.modules.build.BuildRepository;
@@ -14,6 +16,7 @@ import ru.timebook.bro.flow.modules.build.ExecutionService;
 import ru.timebook.bro.flow.modules.build.MergeService;
 import ru.timebook.bro.flow.modules.git.GitlabGitRepository;
 import ru.timebook.bro.flow.modules.taskTracker.TaskTracker;
+import ru.timebook.bro.flow.utils.DateTimeUtil;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
@@ -22,8 +25,12 @@ import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.Response;
 import java.io.File;
 import java.io.FileFilter;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.Date;
 import java.util.List;
 
 @Slf4j
@@ -98,5 +105,30 @@ public class ExecutionServiceIntegrationTest {
     @Test
     void gitlabAvatarUriRepoTest() {
         gitlabGitRepository.getCommitterAvatarUri("linus.torvalds@gmail.com");
+    }
+
+    @Autowired
+    private DateTimeUtil dateTimeUtil;
+    @Test
+    void gitqw() throws GitLabApiException {
+        var hash = getBranchCheckSum("timebook/timebook", "27449-outsource-market");
+        log.trace("{}", hash);
+
+    }
+
+    private String getBranchCheckSum(String projectName, String branchName){
+        ZoneId systemTimeZone = ZoneId.systemDefault();
+        var since = Date.from(dateTimeUtil.duration("P-30D").toLocalDate().atStartOfDay(systemTimeZone).toInstant());
+        var until = Date.from(dateTimeUtil.duration("P+1D").toLocalDate().atStartOfDay(systemTimeZone).toInstant());
+        var commitBuffer = new StringBuffer();
+        try {
+            gitlabGitRepository.getApi().getCommitsApi()
+                    .getCommits(projectName, branchName, since, until, 100).stream().forEach(c -> {
+                commitBuffer.append(c.getMessage());
+            });
+        } catch (GitLabApiException e){
+            log.error("Exception", e);
+        }
+        return DigestUtils.md5DigestAsHex(commitBuffer.toString().getBytes(StandardCharsets.UTF_8));
     }
 }

@@ -17,6 +17,7 @@ public class Merge {
     private String projectName;
     private String projectSafeName;
     private String projectShortName;
+    private String remoteBranchName;
     private List<Branch> branches;
     private File dirMerge;
     private File dirRepo;
@@ -24,7 +25,7 @@ public class Merge {
     private Push push;
     private String initStdout;
     private String initCode;
-    private boolean needForcePush;
+    private boolean reused;
 
     @JsonIgnore
     public boolean getInitSuccess() {
@@ -67,6 +68,7 @@ public class Merge {
         private String stderr;
         private String code;
         private List<Commit> commits;
+        private String checkSum;
 
         @Data
         @Builder

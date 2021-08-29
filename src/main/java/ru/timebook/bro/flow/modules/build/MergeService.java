@@ -3,7 +3,6 @@ package ru.timebook.bro.flow.modules.build;
 import com.google.common.base.Stopwatch;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -58,22 +57,9 @@ public class MergeService {
     }
 
     public void merge(List<Merge> merges) {
-        merges.parallelStream().forEach(merge -> {
+        merges.stream().parallel().filter(m -> !m.isReused()).forEach(merge -> {
             initRepo(merge);
             mergeRepo(merge);
-        });
-    }
-
-    public boolean needUpdate(List<Merge> merges, List<Issue> issues) {
-        return merges.parallelStream().anyMatch(m -> {
-            var page = PageRequest.of(0, 1, Sort.by("startAt").descending());
-            var build = buildRepository.findFirstByPushed(page, dateTimeUtil.duration("P-1D")).stream().findFirst();
-            if (build.isEmpty()) {
-                log.warn("Build empty, force update: {}", m.getProjectName());
-            } else if (!build.get().getHash().equals(getBuildHash(merges, issues))) {
-                log.warn("Build hash not equal, force update: {}", m.getProjectName());
-            }
-            return build.isEmpty() || !build.get().getHash().equals(getBuildHash(merges, issues));
         });
     }
 
@@ -90,49 +76,76 @@ public class MergeService {
         return DigestUtils.md5DigestAsHex(source.getBytes(StandardCharsets.UTF_8));
     }
 
-    public Optional<Build> checkJob() {
+    private boolean updateJobStatus(BuildHasProject bp) {
+        var p = bp.getProject();
+        var status = gitlabGitRepository.getJobStatus(p.getName(), bp.getJobId());
+        if (status.isEmpty() || status.get().equals(bp.getJobStatus())) {
+            return false;
+        }
+        var s = status.get();
+        try {
+            var m = jsonUtil.deserialize(bp.getMergesJson(), Merge.class);
+            m.getPush().getDeploy().setJobStatus(s);
+            bp.setMergesJson(jsonUtil.serialize(m));
+        } catch (IOException e) {
+            log.error("Catch exception", e);
+        }
+        bp.setJobStatus(s);
+        buildHasProjectRepository.save(bp);
+        return true;
+    }
+
+    private void updateBuildIssue(BuildHasProject bp) {
+        var b = bp.getBuild();
+        var p = bp.getProject();
+        var s = bp.getJobStatus();
+        try {
+            var issues = List.of(jsonUtil.deserialize(b.getIssuesJson(), Issue[].class));
+            issues.forEach(i -> {
+                i.getPullRequests().stream().filter(pr -> pr.getProjectName() != null).forEach(pr -> {
+                    if (pr.getProjectName().equals(p.getName())) {
+                        pr.setDeployedStatus(s);
+                    }
+                });
+            });
+            b.setIssuesJson(jsonUtil.serialize(issues));
+            buildRepository.save(b);
+        } catch (IOException e) {
+            log.error("Catch exception", e);
+        }
+    }
+
+    public Optional<Build> getLastBuild() {
         var page = PageRequest.of(0, 1, Sort.by("startAt").descending());
-        var build = buildRepository.findFirstByProcessingJob(page, dateTimeUtil.duration("PT-1H30M")).stream().findFirst();
+        var build = buildRepository.findFirstByPushedAndJobId(page, dateTimeUtil.duration("PT-4H")).stream().findFirst();
         if (build.isEmpty()) {
             return Optional.empty();
         }
-        var b = build.get();
-        var exists = b.getBuildHasProjects().stream().filter(bp -> Objects.nonNull(bp.getJobId())).anyMatch(bp -> {
-            var p = bp.getProject();
-            var status = gitlabGitRepository.getJobStatus(p.getName(), bp.getJobId());
-            if (status.isEmpty() || status.get().equals(bp.getJobStatus())) {
-                return false;
-            }
-            var s = status.get();
-            var hasSuccess = s.equals("success");
-            try {
-                var m = jsonUtil.deserialize(bp.getMergesJson(), Merge.class);
-                m.getPush().getDeploy().setJobStatus(s);
-                bp.setMergesJson(jsonUtil.serialize(m));
+        return build;
+    }
 
-            } catch (IOException e) {
-                log.error("Catch exception", e);
-            }
-            bp.setJobStatus(s);
-            buildHasProjectRepository.save(bp);
-
-            try {
-                var issues = List.of(jsonUtil.deserialize(b.getIssuesJson(), Issue[].class));
-                issues.forEach(i -> {
-                    i.getPullRequests().stream().filter(pr -> pr.getProjectName() != null).forEach(pr -> {
-                        if (pr.getProjectName().equals(p.getName())) {
-                            pr.setDeployedStatus(s);
-                        }
-                    });
+    public Optional<Build> updateJob() {
+        var build = getLastBuild();
+        if (build.isEmpty()) {
+            return Optional.empty();
+        }
+        var jobStatus = Arrays.asList("success", "failed", "canceled", "skipped");
+        var allMatch = build.get().getBuildHasProjects().stream()
+                .filter(bp -> Objects.nonNull(bp.getJobId()))
+                .allMatch(bp -> jobStatus.contains(bp.getJobStatus()));
+        if (allMatch) {
+            return Optional.empty();
+        }
+        build.get().getBuildHasProjects().stream()
+                .filter(bp -> Objects.nonNull(bp.getJobId()))
+                .filter(bp -> !jobStatus.contains(bp.getJobStatus()))
+                .forEach(bp -> {
+                    if (updateJobStatus(bp)) {
+                        updateBuildIssue(bp);
+                    }
                 });
-                b.setIssuesJson(jsonUtil.serialize(issues));
-                buildRepository.save(b);
-            } catch (IOException e) {
-                log.error("Catch exception", e);
-            }
-            return hasSuccess;
-        });
-        return exists ? Optional.of(b) : Optional.empty();
+
+        return Optional.empty();
     }
 
     public void clean() {
@@ -172,7 +185,7 @@ public class MergeService {
     }
 
     public void push(List<Merge> merges) {
-        merges.parallelStream().forEach(m -> {
+        merges.parallelStream().filter(m -> !m.isReused()).forEach(m -> {
             if (!m.getInitSuccess()) {
                 log.error("Skip push command, because init repo with error. See init logs: {}", m.getInitStdout());
                 return;
@@ -185,26 +198,18 @@ public class MergeService {
         if (merges.stream().noneMatch(m -> m.getPush().isPushed())) {
             return;
         }
-        merges.stream()
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            log.error("Catch exception", e);
+        }
+        merges.stream().parallel()
                 .filter(m -> m.getPush().isPushed())
-                .forEach(m -> {
-                            try {
-                                Thread.sleep(1000);
-                            } catch (InterruptedException e) {
-                                log.error("Catch exception", e);
-                            }
-                            m.getPush().setDeploy(gitlabGitRepository.getDeploy(m.getProjectName(), config.getStage().getBranchName()));
-                        }
-                );
+                .forEach(m -> m.getPush().setDeploy(gitlabGitRepository.getDeploy(m.getProjectName(), config.getStage().getBranchName())));
     }
 
     private void pushExec(Merge merge) {
-        var project = projectRepository.findByName(merge.getProjectName());
         var cmd = config.getStage().getPushCmd();
-        if (!merge.isNeedForcePush() && project.isPresent() && project.get().getBuildCheckSum() != null && project.get().getBuildCheckSum().equals(merge.getCheckSum())) {
-            log.trace("Push skipped. Project '{}', cmd: '{}', checksum equal {}", merge.getProjectName(), cmd, project.get().getBuildCheckSum());
-            return;
-        }
         try {
             var resp = exec(cmd, merge.getDirRepo());
             merge.getPush().setLog(resp.get("stdout"));

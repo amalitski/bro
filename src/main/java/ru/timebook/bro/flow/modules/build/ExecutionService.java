@@ -4,6 +4,8 @@ import com.google.common.base.Stopwatch;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import ru.timebook.bro.flow.configs.Config;
 import ru.timebook.bro.flow.exceptions.FlowRuntimeException;
@@ -11,6 +13,7 @@ import ru.timebook.bro.flow.modules.git.GitRepository;
 import ru.timebook.bro.flow.modules.taskTracker.Issue;
 import ru.timebook.bro.flow.modules.taskTracker.TaskTracker;
 import ru.timebook.bro.flow.modules.git.Merge;
+import ru.timebook.bro.flow.utils.DateTimeUtil;
 import ru.timebook.bro.flow.utils.JsonUtil;
 
 import java.io.IOException;
@@ -29,6 +32,7 @@ public class ExecutionService {
     private final ProjectRepository projectRepository;
     private final BuildHasProjectRepository buildHasProjectRepository;
     private final JsonUtil jsonUtil;
+    private final DateTimeUtil dateTimeUtil;
 
     @Data
     @Builder
@@ -44,7 +48,8 @@ public class ExecutionService {
                             BuildHasProjectRepository buildHasProjectRepository,
                             Map<String, TaskTracker> taskTrackers,
                             Map<String, GitRepository> gitRepositories,
-                            JsonUtil jsonUtil
+                            JsonUtil jsonUtil,
+                            DateTimeUtil dateTimeUtil
     ) {
         this.mergeService = mergeService;
         this.config = config;
@@ -54,6 +59,7 @@ public class ExecutionService {
         this.taskTrackers = taskTrackers.values().stream().filter(TaskTracker::isEnabled).collect(Collectors.toList());
         this.gitRepositories = gitRepositories.values().stream().filter(GitRepository::isEnabled).collect(Collectors.toList());
         this.jsonUtil = jsonUtil;
+        this.dateTimeUtil = dateTimeUtil;
     }
 
     public boolean validate() {
@@ -78,9 +84,10 @@ public class ExecutionService {
         try {
             taskTrackers.forEach((v) -> issues.addAll(v.getForMerge()));
             gitRepositories.forEach((v) -> v.getInfo(issues));
-            var merges = gitRepositories.stream().map(v -> v.getMerge(issues)).flatMap(Collection::stream).collect(Collectors.toList());
-            mergeService.merge(merges);
-            if (mergeService.needUpdate(merges, issues)) {
+            var merges = restoreFromLast(issues);
+            var reused = merges.stream().allMatch(Merge::isReused);
+            if (!reused) {
+                mergeService.merge(merges);
                 mergeService.push(merges);
                 issues.forEach(i -> i.getPullRequests().forEach(pr -> mergeService.getBranchByPr(pr, merges).ifPresent(pr::setBranch)));
                 issues.forEach(mergeService::updateCommitters);
@@ -95,8 +102,60 @@ public class ExecutionService {
         log.debug("Complete: {}", timer.stop());
     }
 
+    private List<Merge> restoreFromLast(List<Issue> issues) {
+        var lastMerges = getLastMerges();
+        var newMerges = gitRepositories.stream().parallel()
+                .map(v -> v.getMerge(issues))
+                .flatMap(Collection::stream)
+                .collect(Collectors.toList());
+        return newMerges.stream().parallel().map(m -> {
+            m.setReused(false);
+            var lMerge = lastMerges.stream().filter(lm -> lm.getProjectName().equals(m.getProjectName())).findFirst();
+            if (lMerge.isEmpty()) {
+                log.warn("Load new state. Previous merge empty.");
+                return m;
+            }
+            var bNewList = m.getBranches().stream().map(Merge.Branch::getCheckSum)
+                    .sorted(Comparator.comparing(String::toString))
+                    .collect(Collectors.joining(","));
+            var bLastList = lMerge.get().getBranches().stream().map(Merge.Branch::getCheckSum)
+                    .sorted(Comparator.comparing(String::toString))
+                    .collect(Collectors.joining(","));
+            if (!bNewList.equals(bLastList)) {
+                log.warn("Load new state. Checksum from branches doesn't equal.");
+                return m;
+            }
+            var nCommit = m.getPush().getDeploy().getCommitSha();
+            var lCommit = lMerge.get().getPush().getDeploy().getCommitSha();
+            if (Objects.nonNull(nCommit) && Objects.nonNull(lCommit) && nCommit.equals(lCommit)) {
+                var lM = lMerge.get();
+                lM.getPush().setPushed(false);
+                lM.setReused(true);
+                return lM;
+            }
+            log.warn("Load new state. Remote commit from targetBranch doesn't equal.");
+            return m;
+        }).collect(Collectors.toList());
+    }
+
+    private List<Merge> getLastMerges() {
+        var page = PageRequest.of(0, 1, Sort.by("startAt").descending());
+        var build = buildRepository.findFirstByPushedAndJobId(page, dateTimeUtil.duration("P-1D")).stream().findFirst();
+        if (build.isEmpty()) {
+            return List.of();
+        }
+        return build.get().getBuildHasProjects().stream().map(bp -> {
+            try {
+                return jsonUtil.deserialize(bp.getMergesJson(), Merge.class);
+            } catch (IOException e) {
+                log.error("Deserialize with exception", e);
+            }
+            return null;
+        }).collect(Collectors.toList());
+    }
+
     public void checkJobAndUpdateIssue() {
-        var build = mergeService.checkJob();
+        var build = mergeService.updateJob();
         if (build.isEmpty()) {
             return;
         }

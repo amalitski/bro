@@ -10,11 +10,11 @@ data:
       flow:
         stage:
           name: {{ .Values.env_url }}
-          cronReceive: "0 0 * * * ?"
+          cronReceive: "0 */1 * * * ?"
           deploy:
             jobName: {{ pluck .Values.werf.env .Values.bro.flow.stage.deploy.jobName | first | default .Values.bro.flow.stage.deploy.jobName._default }}
           git:
-            cronReceive: "0 0 * * * ?"
+            cronReceive: "0 */1 * * * ?"
             userEmail: {{ pluck .Values.werf.env .Values.bro.flow.stage.git.userEmail | first | default .Values.bro.flow.stage.git.userEmail._default }}
         task-trackers:
           redmine:
@@ -47,16 +47,6 @@ data:
               - path: timebook/timebook
                 preMerge: master
               - path: timebook/timebook.web-client
-                preMerge: master
-              - path: IT/DEV/shift-sender
-                preMerge: master
-              - path: IT/DEV/Node-MS/auchan-ms
-                preMerge: master
-              - path: IT/DEV/Node-MS/lenta-ms
-                preMerge: master
-              - path: IT/DEV/Node-MS/document-ms
-                preMerge: master
-              - path: IT/DEV/web-sockets
                 preMerge: master
               - path: IT/DEV/recognition/surf
                 preMerge: master

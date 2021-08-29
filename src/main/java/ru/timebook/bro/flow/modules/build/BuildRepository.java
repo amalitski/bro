@@ -22,11 +22,10 @@ public interface BuildRepository extends CrudRepository<Build, Long> {
             JOIN bp.project p
             WHERE b.startAt >= :startAt AND
                 bp.pushed = true AND
-                bp.jobId IS NOT NULL AND
-                (bp.jobStatus IS NULL OR bp.jobStatus NOT IN ('success', 'failed', 'canceled', 'skipped'))
+                bp.jobId IS NOT NULL
                 GROUP BY b, b.hash
             """)
-    List<Build> findFirstByProcessingJob(Pageable pageable, LocalDateTime startAt);
+    List<Build> findFirstByPushedAndJobId(Pageable pageable, LocalDateTime startAt);
 
     @Query(value = """
             SELECT b FROM Build b JOIN b.buildHasProjects bp

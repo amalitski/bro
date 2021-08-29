@@ -67,7 +67,7 @@ public class RedmineTaskTracker implements TaskTracker {
             log.error("Redmine error", e);
         }
         listIssues.sort(Comparator.comparing(Issue::getId).reversed());
-        log.debug("Issues for merge: {}", listIssues.size());
+        log.debug("Redmine issues: {}", listIssues.size());
         return listIssues;
     }
 
