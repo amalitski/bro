@@ -16,9 +16,12 @@ import ru.timebook.bro.flow.exceptions.FlowRuntimeException;
 import ru.timebook.bro.flow.configs.Config;
 import ru.timebook.bro.flow.modules.taskTracker.Issue;
 import ru.timebook.bro.flow.services.CacheService;
+import ru.timebook.bro.flow.utils.DateTimeUtil;
 
 import java.nio.charset.StandardCharsets;
+import java.time.ZoneId;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -30,11 +33,13 @@ public class GitlabGitRepository implements GitRepository {
     private final Config.Stage configStage;
     private GitLabApi gitLabApi;
     private final CacheService cacheService;
+    private final DateTimeUtil dateTimeUtil;
 
-    public GitlabGitRepository(Config config, CacheService cacheService) {
+    public GitlabGitRepository(Config config, CacheService cacheService, DateTimeUtil dateTimeUtil) {
         this.config = config.getRepositories().getGitlab();
         this.configStage = config.getStage();
         this.cacheService = cacheService;
+        this.dateTimeUtil = dateTimeUtil;
     }
 
     @Override
@@ -42,7 +47,6 @@ public class GitlabGitRepository implements GitRepository {
         issues.parallelStream().forEach(i -> {
             i.getPullRequests().forEach(this::getPullRequestInfo);
         });
-        log.trace("Issues information loaded");
     }
 
     public void getPullRequestInfo(Issue.PullRequest pullRequest) {
@@ -139,6 +143,7 @@ public class GitlabGitRepository implements GitRepository {
                             .branchName(pr.getSourceBranchName())
                             .targetBranchName(pr.getTargetBranchName())
                             .merged(pr.getMerged())
+                            .checkSum(!pr.getMerged() ? getBranchCheckSum(pr.getProjectName(), pr.getSourceBranchName()) : "merged-" + pr.getSourceBranchName())
                             .build());
                     map.remove(pr.getProjectName());
                 } else {
@@ -153,7 +158,7 @@ public class GitlabGitRepository implements GitRepository {
                 maps.add(getMergeByRepo(r));
             }
         });
-        maps.forEach(m -> {
+        maps.stream().parallel().forEach(m -> {
             m.setRemoteBranchName(configStage.getBranchName());
             var push = Merge.Push.builder()
                     .deploy(getDeploy(m.getProjectName(), m.getRemoteBranchName()))
@@ -173,7 +178,9 @@ public class GitlabGitRepository implements GitRepository {
                 .branches(branches.stream().map(v -> Merge.Branch.builder()
                         .branchName(v)
                         .targetBranchName(pr.getTargetBranchName())
-                        .merged(pr.getMerged()).build()).collect(Collectors.toList()))
+                        .merged(pr.getMerged())
+                        .checkSum(!pr.getMerged() ? getBranchCheckSum(pr.getProjectName(), v) : "merged-" + v)
+                        .build()).collect(Collectors.toList()))
                 .projectId(DigestUtils.md5DigestAsHex(pr.getProjectName().getBytes(StandardCharsets.UTF_8)))
                 .projectName(pr.getProjectName())
                 .projectSafeName(pr.getProjectName().replaceAll("[^A-Za-z0-9\\-_.]", "."))
@@ -191,7 +198,9 @@ public class GitlabGitRepository implements GitRepository {
                 .branches(repo.getPreMerge().stream().map(v -> Merge.Branch.builder()
                         .branchName(v)
                         .targetBranchName(v)
-                        .merged(true).build()).collect(Collectors.toList()))
+                        .merged(true)
+                        .checkSum(getBranchCheckSum(repo.getPath(), v))
+                        .build()).collect(Collectors.toList()))
                 .projectId(DigestUtils.md5DigestAsHex(repo.getPath().getBytes(StandardCharsets.UTF_8)))
                 .projectName(repo.getPath())
                 .projectSafeName(repo.getPath().replaceAll("[^A-Za-z0-9\\-_.]", "."))
@@ -226,18 +235,6 @@ public class GitlabGitRepository implements GitRepository {
         try {
             return api.getPipelineApi().getPipelines(projectName, p).stream().map(pp -> {
                 var job = getDeployJobByPipeline(projectName, pp.getId());
-                if (job.isPresent()) {
-                    var j = job.get();
-                    log.trace("Job: {} / {} / {} / jobId: {}",
-                            projectName,
-                            j.getCommit().getCommitterName(),
-                            j.getCommit().getCreatedAt(),
-                            j.getId()
-                    );
-                } else {
-                    log.trace("Job: {} - not found", projectName);
-                    return null;
-                }
                 return job.map(value -> Merge.Push.Deploy.builder()
                         .commitSha(value.getCommit().getId())
                         .jobId(value.getId())
@@ -261,6 +258,22 @@ public class GitlabGitRepository implements GitRepository {
             throw new FlowRuntimeException(e);
         }
     }
+    private String getBranchCheckSum(String projectName, String branchName){
+        ZoneId systemTimeZone = ZoneId.systemDefault();
+        var since = Date.from(dateTimeUtil.duration("P-30D").toLocalDate().atStartOfDay(systemTimeZone).toInstant());
+        var until = Date.from(dateTimeUtil.duration("P+1D").toLocalDate().atStartOfDay(systemTimeZone).toInstant());
+        var commitBuffer = new StringBuffer();
+        var api = getApi();
+        try {
+            api.getCommitsApi().getCommits(projectName, branchName, since, until, 100)
+                    .stream().forEach(c -> commitBuffer.append(c.getMessage()));
+        } catch (GitLabApiException e){
+            log.error("Exception", e);
+            throw new FlowRuntimeException(e);
+        }
+        return DigestUtils.md5DigestAsHex(commitBuffer.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
 
     private Project getProject(String projectName) throws FlowRuntimeException {
         try {

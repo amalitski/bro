@@ -57,18 +57,9 @@ public class MergeService {
     }
 
     public void merge(List<Merge> merges) {
-        merges.parallelStream().filter(m -> Objects.isNull(m.getCheckSum()) || m.getCheckSum().isEmpty()).forEach(merge -> {
-            log.warn("Checksum: {}", merge.getCheckSum());
+        merges.stream().parallel().filter(m -> !m.isReused()).forEach(merge -> {
             initRepo(merge);
             mergeRepo(merge);
-        });
-    }
-
-    public boolean needUpdate(List<Merge> merges, List<Issue> issues) {
-        return merges.parallelStream().anyMatch(m -> {
-            var page = PageRequest.of(0, 1, Sort.by("startAt").descending());
-            var build = buildRepository.findFirstByPushed(page, dateTimeUtil.duration("P-1D")).stream().findFirst();
-            return build.isEmpty() || !build.get().getHash().equals(getBuildHash(merges, issues));
         });
     }
 
@@ -194,7 +185,7 @@ public class MergeService {
     }
 
     public void push(List<Merge> merges) {
-        merges.parallelStream().forEach(m -> {
+        merges.parallelStream().filter(m -> !m.isReused()).forEach(m -> {
             if (!m.getInitSuccess()) {
                 log.error("Skip push command, because init repo with error. See init logs: {}", m.getInitStdout());
                 return;
@@ -207,26 +198,18 @@ public class MergeService {
         if (merges.stream().noneMatch(m -> m.getPush().isPushed())) {
             return;
         }
-        merges.stream()
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            log.error("Catch exception", e);
+        }
+        merges.stream().parallel()
                 .filter(m -> m.getPush().isPushed())
-                .forEach(m -> {
-                            try {
-                                Thread.sleep(1000);
-                            } catch (InterruptedException e) {
-                                log.error("Catch exception", e);
-                            }
-                            m.getPush().setDeploy(gitlabGitRepository.getDeploy(m.getProjectName(), config.getStage().getBranchName()));
-                        }
-                );
+                .forEach(m -> m.getPush().setDeploy(gitlabGitRepository.getDeploy(m.getProjectName(), config.getStage().getBranchName())));
     }
 
     private void pushExec(Merge merge) {
-        var project = projectRepository.findByName(merge.getProjectName());
         var cmd = config.getStage().getPushCmd();
-        if (project.isPresent() && project.get().getBuildCheckSum() != null && project.get().getBuildCheckSum().equals(merge.getCheckSum())) {
-            log.trace("Push skipped. Project '{}', cmd: '{}', checksum equal {}", merge.getProjectName(), cmd, project.get().getBuildCheckSum());
-            return;
-        }
         try {
             var resp = exec(cmd, merge.getDirRepo());
             merge.getPush().setLog(resp.get("stdout"));

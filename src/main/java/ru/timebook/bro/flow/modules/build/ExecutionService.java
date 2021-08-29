@@ -85,8 +85,9 @@ public class ExecutionService {
             taskTrackers.forEach((v) -> issues.addAll(v.getForMerge()));
             gitRepositories.forEach((v) -> v.getInfo(issues));
             var merges = restoreFromLast(issues);
-            mergeService.merge(merges);
-            if (mergeService.needUpdate(merges, issues)) {
+            var reused = merges.stream().allMatch(Merge::isReused);
+            if (!reused) {
+                mergeService.merge(merges);
                 mergeService.push(merges);
                 issues.forEach(i -> i.getPullRequests().forEach(pr -> mergeService.getBranchByPr(pr, merges).ifPresent(pr::setBranch)));
                 issues.forEach(mergeService::updateCommitters);
@@ -108,17 +109,20 @@ public class ExecutionService {
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
         return newMerges.stream().parallel().map(m -> {
+            m.setReused(false);
             var lMerge = lastMerges.stream().filter(lm -> lm.getProjectName().equals(m.getProjectName())).findFirst();
             if (lMerge.isEmpty()) {
+                log.warn("Load new state. Previous merge empty.");
                 return m;
             }
-            var bNewList = m.getBranches().stream().map(Merge.Branch::getBranchName)
+            var bNewList = m.getBranches().stream().map(Merge.Branch::getCheckSum)
                     .sorted(Comparator.comparing(String::toString))
                     .collect(Collectors.joining(","));
-            var bLastList = lMerge.get().getBranches().stream().map(Merge.Branch::getBranchName)
+            var bLastList = lMerge.get().getBranches().stream().map(Merge.Branch::getCheckSum)
                     .sorted(Comparator.comparing(String::toString))
                     .collect(Collectors.joining(","));
             if (!bNewList.equals(bLastList)) {
+                log.warn("Load new state. Checksum from branches doesn't equal.");
                 return m;
             }
             var nCommit = m.getPush().getDeploy().getCommitSha();
@@ -126,8 +130,10 @@ public class ExecutionService {
             if (Objects.nonNull(nCommit) && Objects.nonNull(lCommit) && nCommit.equals(lCommit)) {
                 var lM = lMerge.get();
                 lM.getPush().setPushed(false);
+                lM.setReused(true);
                 return lM;
             }
+            log.warn("Load new state. Remote commit from targetBranch doesn't equal.");
             return m;
         }).collect(Collectors.toList());
     }
