@@ -84,7 +84,7 @@ public class MergeService {
         return DigestUtils.md5DigestAsHex(source.getBytes(StandardCharsets.UTF_8));
     }
 
-    private boolean updateJobStatus(BuildHasProject bp){
+    private boolean updateJobStatus(BuildHasProject bp) {
         var p = bp.getProject();
         var status = gitlabGitRepository.getJobStatus(p.getName(), bp.getJobId());
         if (status.isEmpty() || status.get().equals(bp.getJobStatus())) {
@@ -123,7 +123,7 @@ public class MergeService {
         }
     }
 
-    public Optional<Build> getLastBuild(){
+    public Optional<Build> getLastBuild() {
         var page = PageRequest.of(0, 1, Sort.by("startAt").descending());
         var build = buildRepository.findFirstByPushedAndJobId(page, dateTimeUtil.duration("PT-4H")).stream().findFirst();
         if (build.isEmpty()) {
@@ -132,9 +132,9 @@ public class MergeService {
         return build;
     }
 
-    public Optional<Build> updateJob(){
+    public Optional<Build> updateJob() {
         var build = getLastBuild();
-        if (build.isEmpty()){
+        if (build.isEmpty()) {
             return Optional.empty();
         }
         var jobStatus = Arrays.asList("success", "failed", "canceled", "skipped");

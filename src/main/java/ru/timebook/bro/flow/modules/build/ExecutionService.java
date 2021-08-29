@@ -108,8 +108,8 @@ public class ExecutionService {
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
         return newMerges.stream().parallel().map(m -> {
-            var lMerge = lastMerges.stream().filter(lm-> lm.getProjectName().equals(m.getProjectName())).findFirst();
-            if (lMerge.isEmpty()){
+            var lMerge = lastMerges.stream().filter(lm -> lm.getProjectName().equals(m.getProjectName())).findFirst();
+            if (lMerge.isEmpty()) {
                 return m;
             }
             var bNewList = m.getBranches().stream().map(Merge.Branch::getBranchName)
@@ -118,7 +118,7 @@ public class ExecutionService {
             var bLastList = lMerge.get().getBranches().stream().map(Merge.Branch::getBranchName)
                     .sorted(Comparator.comparing(String::toString))
                     .collect(Collectors.joining(","));
-            if (!bNewList.equals(bLastList)){
+            if (!bNewList.equals(bLastList)) {
                 return m;
             }
             var nCommit = m.getPush().getDeploy().getCommitSha();
