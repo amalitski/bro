@@ -10,6 +10,6 @@ spec:
   selector:
     app: {{ .Chart.Name }}
   ports:
-  - port: {{ pluck .Values.werf.env .Values.app.port | first | default .Values.app.port._default }}
-    targetPort: {{ pluck .Values.werf.env .Values.app.port | first | default .Values.app.port._default }}
+  - port: {{ pluck .Values.global.env .Values.app.port | first | default .Values.app.port._default }}
+    targetPort: {{ pluck .Values.global.env .Values.app.port | first | default .Values.app.port._default }}
     protocol: TCP

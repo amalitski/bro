@@ -4,7 +4,7 @@ kind: StatefulSet
 metadata:
   name: {{ .Chart.Name }}
 spec:
-  replicas: {{ pluck .Values.werf.env .Values.app.replicas | first | default .Values.app.replicas._default }}
+  replicas: {{ pluck .Values.global.env .Values.app.replicas | first | default .Values.app.replicas._default }}
   serviceName: {{ .Chart.Name }}
   selector:
     matchLabels:
@@ -28,7 +28,7 @@ spec:
             secretName: id-rsa
       containers:
       - name: {{ .Chart.Name }}
-        image: {{ first (pluck .Chart.Name .Values.werf.image) }}
+{{ tuple "bro" . | include "werf_container_image" | indent 8 }}
         workingDir: /app
         volumeMounts:
         - name: configs
@@ -42,22 +42,22 @@ spec:
           mountPath: /app/temp/
         resources:
           requests:
-            cpu: {{ pluck .Values.werf.env .Values.app.resources.requests.cpu | first | default .Values.app.resources.requests.cpu._default }}
-            memory: {{ pluck .Values.werf.env .Values.app.resources.requests.memory | first | default .Values.app.resources.requests.memory._default }}
+            cpu: {{ pluck .Values.global.env .Values.app.resources.requests.cpu | first | default .Values.app.resources.requests.cpu._default }}
+            memory: {{ pluck .Values.global.env .Values.app.resources.requests.memory | first | default .Values.app.resources.requests.memory._default }}
           limits:
-            memory: {{ pluck .Values.werf.env .Values.app.resources.limits.memory | first | default .Values.app.resources.limits.memory._default }}
+            memory: {{ pluck .Values.global.env .Values.app.resources.limits.memory | first | default .Values.app.resources.limits.memory._default }}
         ports:
         - name: http
-          containerPort: {{ pluck .Values.werf.env .Values.app.port | first | default .Values.app.port._default }}
+          containerPort: {{ pluck .Values.global.env .Values.app.port | first | default .Values.app.port._default }}
           protocol: TCP
         readinessProbe:
           tcpSocket:
-            port: {{ pluck .Values.werf.env .Values.app.port | first | default .Values.app.port._default }}
+            port: {{ pluck .Values.global.env .Values.app.port | first | default .Values.app.port._default }}
           timeoutSeconds: 5
           initialDelaySeconds: 5
         livenessProbe:
           tcpSocket:
-            port: {{ pluck .Values.werf.env .Values.app.port | first | default .Values.app.port._default }}
+            port: {{ pluck .Values.global.env .Values.app.port | first | default .Values.app.port._default }}
           timeoutSeconds: 1
           initialDelaySeconds: 10
         env:

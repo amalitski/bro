@@ -4,17 +4,17 @@ kind: Ingress
 metadata:
   name: {{ .Chart.Name }}
   annotations:
-    kubernetes.io/ingress.class: {{ pluck .Values.werf.env .Values.ingress_class | first | default .Values.ingress_class._default }}
+    kubernetes.io/ingress.class: {{ pluck .Values.global.env .Values.ingress_class | first | default .Values.ingress_class._default }}
 spec:
   tls:
   - hosts:
-    - {{ .Values.env_url }}
+    - {{ .Values.global.ci_url }}
     secretName: common-crt-tls
   rules:
-  - host: {{ .Values.env_url }}
+  - host: {{ .Values.global.ci_url }}
     http:
       paths:
       - path: /bro
         backend:
           serviceName: {{ .Chart.Name }}
-          servicePort: {{ pluck .Values.werf.env .Values.app.port | first | default .Values.app.port._default }}
+          servicePort: {{ pluck .Values.global.env .Values.app.port | first | default .Values.app.port._default }}
