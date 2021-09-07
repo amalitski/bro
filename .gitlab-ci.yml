@@ -51,7 +51,7 @@ Cleanup:
   script:
     - type multiwerf && source <(multiwerf use ${WERF_VERSION})
     - type werf && source <(werf ci-env gitlab --tagging-strategy tag-or-branch --verbose)
-    - docker login -u nobody -p ${WERF_IMAGES_CLEANUP_PASSWORD} ${WERF_REPO}
+    - docker login -u nobody -p ${WERF_IMAGES_CLEANUP_PASSWORD} ${WERF_IMAGES_REPO}
     - werf cleanup --stages-storage :local
   only:
     - schedules
