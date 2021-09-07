@@ -1,6 +1,11 @@
----
+include:
+  - project: timebook/devops
+    file: pipelines/images.yml
+
 variables:
-  WERF_VERSION: "1.1 stable"
+  NAME: bender
+  GROUP: timebook
+  WERF_VERSION: 1.1 stable
 
 .base_deploy: &base_deploy
   stage: deploy
