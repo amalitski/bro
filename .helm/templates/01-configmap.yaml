@@ -48,6 +48,8 @@ data:
                 preMerge: master
               - path: timebook/timebook.web-client
                 preMerge: master
+              - path: IT/DEV/web-sockets
+                preMerge: master
               - path: IT/DEV/recognition/surf
                 preMerge: master
 
